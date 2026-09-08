@@ -7,16 +7,26 @@ function getReportData_(type,params){
 }
 function renderReportHtml_(type,params){const r=getReportData_(type,params); return type==='detail'?buildDetailReportHtml_(r):buildReportHtml_(r);}
 function pdfRequestKey_(type,params){const raw=JSON.stringify({type:type||'rekap',params:params||{}});const digest=Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,raw);return cacheKey_('PDF_RESULT',[Utilities.base64EncodeWebSafe(digest).replace(/=+$/,'')]);}
-function buildPdfResult_(file){const id=file.getId(),url='https://drive.google.com/uc?export=download&id='+encodeURIComponent(id);return {success:true,name:file.getName(),url:file.getUrl(),downloadUrl:url,id:id,mimeType:'application/pdf',size:file.getSize()};}
+function buildPdfResult_(file){
+  const id=file.getId(),url='https://drive.google.com/uc?export=download&id='+encodeURIComponent(id);
+  return {success:true,name:file.getName(),url:file.getUrl(),downloadUrl:url,id:id,mimeType:'application/pdf',size:file.getSize()};
+}
+function buildPdfClientResult_(file){
+  const meta=buildPdfResult_(file),blob=file.getBlob();
+  if(blob.getContentType()!==MimeType.PDF)throw new Error('File PDF tidak valid.');
+  const bytes=blob.getBytes();
+  if(!bytes.length)throw new Error('File PDF kosong.');
+  return {success:true,name:meta.name,id:meta.id,mimeType:MimeType.PDF,size:bytes.length,downloadUrl:meta.downloadUrl,dataBase64:Utilities.base64Encode(bytes)};
+}
 function createPdfFromReport_(type,params){
   const key=pdfRequestKey_(type,params),cached=cacheGetJson_(key);
-  if(cached&&cached.id){try{const existing=DriveApp.getFileById(cached.id);if(existing.getMimeType()===MimeType.PDF&&existing.getSize()>0)return cached;}catch(e){}}
+  if(cached&&cached.id){try{const existing=DriveApp.getFileById(cached.id);if(existing.getMimeType()===MimeType.PDF&&existing.getSize()>0)return buildPdfClientResult_(existing);}catch(e){}}
   const r=getReportData_(type,params),html=type==='detail'?buildDetailReportHtml_(r):buildReportHtml_(r);
   const stamp=Utilities.formatDate(new Date(),Session.getScriptTimeZone(),'yyyyMMdd_HHmmss'),prefix=type==='detail'?'Laporan_Detail_Siswa_':'Laporan_Rekap_Kelas_';
   const blob=Utilities.newBlob(html,'text/html','laporan.html').getAs(MimeType.PDF).setName(prefix+stamp+'.pdf');
   if(blob.getContentType()!=='application/pdf')throw new Error('Gagal membuat PDF. File hasil konversi bukan PDF.');
   const bytes=blob.getBytes();if(!bytes.length)throw new Error('Gagal membuat PDF. File PDF kosong.');
-  const result=buildPdfResult_(getOrCreateFolder_().createFile(blob));cachePutJson_(key,result,300);return result;
+  const file=getOrCreateFolder_().createFile(blob),result=buildPdfClientResult_(file);cachePutJson_(key,buildPdfResult_(file),300);return result;
 }
 
 
