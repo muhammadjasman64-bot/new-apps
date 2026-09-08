@@ -58,10 +58,21 @@ function getPelanggaranSiswa_(nisn,start,end){
 }
 
 function getTotalPoin_(nisn,start,end){
-  const d=dbRead_(APP.SHEETS.PELANGGARAN),range=dateRangeInclusive_(start,end);
-  const cn=dbFindColumn_(d.map,['NISN','NIS','Nomor Induk Siswa Nasional']),cd=dbFindColumn_(d.map,['Tanggal','Tanggal Pelanggaran','Tgl']),cp=dbFindColumn_(d.map,['Poin','Point']);
-  if(cn<0||cd<0||cp<0)return 0;
-  return d.rows.filter(r=>{const rv=String(r[cn]??'').trim(),dt=dbDate_(r[cd]);return rv===String(nisn).trim()&&dt&&(!range.a||dt>=range.a)&&(!range.b||dt<=range.b);}).reduce((n,r)=>n+toNumberPoin_(r[cp]),0);
+  const d=dbRead_(APP.SHEETS.PELANGGARAN),cfg=getConfigObject_(),range=dateRangeInclusive_(start,end);
+  const cn=dbFindColumn_(d.map,['NISN','NIS','Nomor Induk Siswa Nasional']),cd=dbFindColumn_(d.map,['Tanggal','Tanggal Pelanggaran','Tgl']),cp=dbFindColumn_(d.map,['Poin','Point']),ctp=dbFindColumn_(d.map,['Tahun_Pelajaran','Tahun Pelajaran','TP']);
+  if(cn<0||cp<0)return 0;
+  const activeTP=String(cfg.Tahun_Pelajaran||getTahunPelajaran_()).trim();
+  let period=range;
+  if(!period.a&&!period.b){
+    const first=Number(activeTP.split('/')[0])||new Date().getFullYear();
+    period={a:new Date(first,6,1,0,0,0,0),b:new Date(first+1,5,30,23,59,59,999)};
+  }
+  return d.rows.filter(r=>{
+    const rv=String(r[cn]??'').trim(); if(rv!==String(nisn).trim())return false;
+    if(ctp>=0 && activeTP && String(r[ctp]??'').trim()!==activeTP)return false;
+    const dt=cd>=0?dbDate_(r[cd]):null;
+    return !period.a&&!period.b || (dt&&(!period.a||dt>=period.a)&&(!period.b||dt<=period.b));
+  }).reduce((n,r)=>n+toNumberPoin_(r[cp]),0);
 }
 
 

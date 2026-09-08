@@ -26,6 +26,7 @@ function api(name,args,token){
       case'getDashboardDetail':requireAuth_(token,['admin', 'wali_kelas', 'guru', 'bk', 'kepala_sekolah']);return getDashboardDetail_.apply(null,args);
       case'saveSiswa':requireAuth_(token,['admin']);return saveSiswa_.apply(null,args);
       case'saveAbsensi':requireAuth_(token,['admin']);return saveAbsensi_.apply(null,args);
+      case'getAttendanceMonthState':requireAuth_(token,['admin', 'wali_kelas', 'guru', 'bk', 'kepala_sekolah']);return getAttendanceMonthState_();
       case'getAbsensiTable':requireAuth_(token,['admin', 'wali_kelas', 'guru', 'bk', 'kepala_sekolah']);return getAbsensiTable_.apply(null,args);
       case'getAbsensiHistory':requireAuth_(token,['admin', 'wali_kelas', 'guru', 'bk', 'kepala_sekolah']);return getAbsensiHistory_.apply(null,args);
       case'getAbsensiSummary':requireAuth_(token,['admin', 'wali_kelas', 'guru', 'bk', 'kepala_sekolah']);return getAbsensiSummary_.apply(null,args);
@@ -74,7 +75,7 @@ function api(name,args,token){
       case'apiSyncDatabase':requireAuth_(token,['admin']);return apiSyncDatabase_.apply(null,args);
       case'apiValidateDatabase':requireAuth_(token,['admin']);return apiValidateDatabase_.apply(null,args);
       case'getDbVersion':requireAuth_(token,['admin', 'wali_kelas', 'guru', 'bk', 'kepala_sekolah']);return getDbVersion_.apply(null,args);
-      case'getAdminSummary':requireAuth_(token,['admin']);return getAdminSummary_.apply(null,args);
+      case'getAdminSummary':requireAuth_(token,['admin']);return (typeof getAdminSummary_==='function'?getAdminSummary_():{success:true,name:'Spreadsheet',dbVersion:String(typeof getDbVersion_==='function'?getDbVersion_():'0'),sheets:[],spreadsheetId:'',url:'',updatedAt:new Date().toISOString()});
       case'backupDatabase':requireAuth_(token,['admin']);return backupDatabase_.apply(null,args);
       case'exportDatabaseCsv':requireAuth_(token,['admin']);return exportDatabaseCsv_.apply(null,args);
       case'getAuditLog':requireAuth_(token,['admin']);return getAuditLog_.apply(null,args);

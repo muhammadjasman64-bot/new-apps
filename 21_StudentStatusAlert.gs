@@ -1,6 +1,6 @@
 /**
  * V39 - Automatic Student Status & Alert
- * Status selalu dihitung dari poin bersih Tahun Pelajaran aktif + MASTER_PEMBINAAN resmi.
+ * Status selalu dihitung dari poin pelanggaran Tahun Pelajaran aktif + MASTER_PEMBINAAN resmi.
  * Tidak menyimpan status manual baru; alert dibuat sebagai hasil perhitungan real-time.
  */
 function getStudentStatusAlert_(nisn){
@@ -21,7 +21,7 @@ function getStudentAlerts_(options){
   options=options||{};
   const students=getSiswaAktif_(), alerts=[];
   students.forEach(s=>{try{const a=getStudentStatusAlert_(s.nisn); if(options.onlyAttention!==false && !a.attention)return; alerts.push(a);}catch(e){}});
-  alerts.sort((a,b)=>Number(b.poinBersih)-Number(a.poinBersih));
+  alerts.sort((a,b)=>Number(b.poinPelanggaran)-Number(a.poinPelanggaran));
   return {success:true,total:alerts.length,urgent:alerts.filter(x=>x.urgent).length,attention:alerts.length,items:alerts};
 }
 
@@ -31,7 +31,7 @@ function getStatusAlertSummary_(){
   const counts={},items=[];
   students.forEach(s=>{
     const p=points[String(s.nisn).trim()]||{pel:0,rew:0};
-    const pel=toNumberPoin_(p.pel),rew=toNumberPoin_(p.rew),bersih=Math.max(0,pel-rew),d=getKeputusanPoin_(bersih);
+    const pel=toNumberPoin_(p.pel),rew=toNumberPoin_(p.rew),bersih=Math.max(0,pel-rew),d=getKeputusanPoin_(pel);
     const a={nisn:s.nisn,nama:s.nama,kelas:s.kelas,poinPelanggaran:pel,poinPenghargaan:rew,poinBersih:bersih,status:d.status,min:d.min||0,max:d.max||4,pemanggilan:d.pemanggilan||0,pihak:d.pihak||'',tindakan:d.tindakan||'',dokumen:d.dokumen||d.surat||'',urgent:['SP-1','SP-2','SP-3','SKORSING','KONFERENSI KASUS'].includes(String(d.status)),attention:d.status!=='NORMAL'};
     counts[a.status]=(counts[a.status]||0)+1;items.push(a);
   });

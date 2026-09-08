@@ -3,15 +3,21 @@
  */
 function getAdminSummary_(){
   const ss=getSS_();
-  if(!ss) throw new Error('Spreadsheet aktif tidak ditemukan. Pastikan Web App terikat pada spreadsheet yang benar.');
+  if(!ss) throw new Error('Spreadsheet tidak ditemukan. Jalankan setupDatabase sekali dari project Apps Script yang terhubung ke spreadsheet.');
   const sheets=ss.getSheets().map(function(sh){
-    return {name:sh.getName(),rows:Math.max(0,sh.getLastRow()-1),columns:sh.getLastColumn()};
+    return {name:String(sh.getName()||''),rows:Math.max(0,sh.getLastRow()-1),columns:sh.getLastColumn()};
   });
-  const name=String(ss.getName()||'Spreadsheet');
-  const url=String(ss.getUrl()||'');
-  const dbVersion=typeof getDbVersion_==='function'?String(getDbVersion_()||'1'):'1';
-  return {success:true,spreadsheetId:ss.getId(),name:name,url:url,updated:new Date(),sheets:sheets,dbVersion:dbVersion};
+  return {
+    success:true,
+    spreadsheetId:String(ss.getId()||''),
+    name:String(ss.getName()||'Spreadsheet'),
+    url:String(ss.getUrl()||''),
+    updatedAt:new Date().toISOString(),
+    sheets:sheets,
+    dbVersion:String(typeof getDbVersion_==='function'?getDbVersion_():'0')
+  };
 }
+
 
 function backupDatabase_(){
   const ss=getSS_();

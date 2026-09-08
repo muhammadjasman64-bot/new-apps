@@ -22,7 +22,13 @@ const APP = Object.freeze({
   }
 });
 
-function getSS_(){ return SpreadsheetApp.getActiveSpreadsheet(); }
+function getSS_(){
+  const active=SpreadsheetApp.getActiveSpreadsheet();
+  if(active) return active;
+  const id=PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+  if(id){ try{return SpreadsheetApp.openById(id);}catch(e){} }
+  return null;
+}
 function getSheet_(name){ const sh=getSS_().getSheetByName(name); if(!sh) throw new Error('Sheet '+name+' belum ada. Jalankan setupDatabase_ terlebih dahulu.'); return sh; }
 function generateID_(prefix){ return prefix+'-'+Utilities.getUuid().split('-')[0].toUpperCase(); }
 function formatTanggal_(v){ if(!v) return ''; return Utilities.formatDate(new Date(v),Session.getScriptTimeZone(),'dd/MM/yyyy'); }

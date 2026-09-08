@@ -9,15 +9,16 @@ function getKeputusanPoin_(totalPoin) {
 }
 function getProfilPembinaan_(nisn) {
   const s=findStudentByNisn_(nisn); if(!s) throw new Error('Siswa tidak ditemukan.');
-  const x=getPointSummaryMap_(null,null,getTahunPelajaran_())[String(nisn).trim()]||{pel:0,rew:0};
+  const tp=getTahunPelajaran_(),x=getPointSummaryMap_(null,null,tp)[String(nisn).trim()]||{pel:0,rew:0};
   const pel=toNumberPoin_(x.pel),rew=toNumberPoin_(x.rew),bersih=Math.max(0,pel-rew);
-  return {siswa:s,poinPelanggaran:pel,poinPenghargaan:rew,poinBersih:bersih,keputusan:getKeputusanPoin_(bersih)};
+  // Tahapan pembinaan resmi dihitung dari POIN PELANGGARAN. Penghargaan tetap dicatat terpisah.
+  return {siswa:s,poinPelanggaran:pel,poinPenghargaan:rew,poinBersih:bersih,poinPembinaan:pel,keputusan:getKeputusanPoin_(pel)};
 }
 
 function syncTindakanUntukSiswa_(nisn) {
   const p=getProfilPembinaan_(nisn), d=p.keputusan, cfg=getConfigObject_();
   const sh=getSheet_(APP.SHEETS.TINDAKAN);
-  sh.appendRow([generateID_('TIN'),new Date(),p.siswa.nisn,p.siswa.nama,p.poinBersih,d.status,d.tindakan,'',
+  sh.appendRow([generateID_('TIN'),new Date(),p.siswa.nisn,p.siswa.nama,p.poinPembinaan,d.status,d.tindakan,'',
     Session.getActiveUser().getEmail()||'WebApp','Otomatis berdasarkan sistem poin',
     cfg.Tahun_Pelajaran||getTahunPelajaran_(),cfg.Semester||getSemesterAktif_()]);
   return p;

@@ -46,6 +46,10 @@ function syncDatabase() {
   return apiSyncDatabase_();
 }
 
+function rolloverAttendanceMonth() {
+  return ensureAttendanceMonthCycle_();
+}
+
 function evaluateDecisionEngine() {
   return evaluateAllStudentsDecisions_();
 }

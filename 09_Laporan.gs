@@ -154,7 +154,7 @@ function buildReportHtml_(r){
     '</colgroup><thead><tr><th>No</th><th>NISN</th><th>Nama Siswa</th><th>Persentase Kehadiran</th><th>Total Poin Pelanggaran</th><th>Poin Penghargaan</th><th>Tindak Lanjut</th></tr></thead><tbody>';
 
   (r.data||[]).forEach((x,i)=>{
-    const lanjut=getKeputusanPoin_(Math.max(0,Number(x.poinBersih||0)));
+    const lanjut=getKeputusanPoin_(Number(x.poinPelanggaran||0));
     body+='<tr><td>'+ (i+1) +'</td>'+
       '<td>'+escapeHtmlServer_(x.nisn)+'</td>'+
       '<td class="left namecell">'+escapeHtmlServer_(x.nama)+'</td>'+

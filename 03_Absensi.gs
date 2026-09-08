@@ -1,5 +1,6 @@
 /** 03_Absensi.gs - absensi dengan agregasi satu lintasan. */
 function saveAbsensi_(records){
+  if(typeof ensureAttendanceMonthCycle_==='function')ensureAttendanceMonthCycle_();
   if(!Array.isArray(records)||!records.length)throw new Error('Data absensi kosong.');
   const sh=getSheet_(APP.SHEETS.ABSENSI),cfg=getConfigObject_(),user=Session.getActiveUser().getEmail()||'WebApp',now=new Date();
   const lastRow=sh.getLastRow(),lastCol=sh.getLastColumn();

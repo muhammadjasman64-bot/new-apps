@@ -4,6 +4,8 @@
  */
 function setupDatabase_() {
   const ss=getSS_();
+  if(!ss) throw new Error('Spreadsheet tidak ditemukan. Buka project Apps Script dari spreadsheet yang benar lalu jalankan setupDatabase sekali.');
+  PropertiesService.getScriptProperties().setProperty('SPREADSHEET_ID',ss.getId());
   const defs={
     USERS:['ID_User','Username','Password_Hash','Nama_Lengkap','Role','NISN','Kelas','Status','Created_At','Updated_At'],
     CONFIG:['Parameter','Nilai'],

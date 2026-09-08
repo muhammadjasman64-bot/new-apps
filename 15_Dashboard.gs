@@ -18,9 +18,9 @@ function getDashboardDetail_(){
     c.kehadiran+=a?Number(a.kehadiran||0):0;
     const p=agg[String(s.nisn).trim()]||{pel:0,rew:0};
     c.poinPelanggaran+=Number(p.pel||0); c.poinPenghargaan+=Number(p.rew||0);
-    if(getKeputusanPoin_(Math.max(0,(p.pel||0)-(p.rew||0))).status!=='NORMAL')c.perluPembinaan++;
+    if(getKeputusanPoin_(Number(p.pel||0)).status!=='NORMAL')c.perluPembinaan++;
   });
   const kelas=Object.values(byClass).map(x=>Object.assign(x,{rataKehadiran:x.jumlah?Number((x.kehadiran/x.jumlah).toFixed(2)):0})).sort((a,b)=>a.kelas.localeCompare(b.kelas));
-  const top=students.map(s=>{const p=agg[String(s.nisn).trim()]||{pel:0,rew:0};return{nisn:s.nisn,nama:s.nama,kelas:s.kelas,poinBersih:Math.max(0,(p.pel||0)-(p.rew||0)),status:getKeputusanPoin_(Math.max(0,(p.pel||0)-(p.rew||0))).status};}).filter(x=>x.poinBersih>0).sort((a,b)=>b.poinBersih-a.poinBersih).slice(0,10);
+  const top=students.map(s=>{const p=agg[String(s.nisn).trim()]||{pel:0,rew:0};return{nisn:s.nisn,nama:s.nama,kelas:s.kelas,poinBersih:Math.max(0,(p.pel||0)-(p.rew||0)),status:getKeputusanPoin_(Number(p.pel||0)).status};}).filter(x=>x.poinBersih>0).sort((a,b)=>b.poinBersih-a.poinBersih).slice(0,10);
   return cachePutJson_('DASHBOARD_DETAIL_CACHE',{periode:'Semester '+sem+' — Tahun Pelajaran '+(cfg.Tahun_Pelajaran||''),kelas,top},CACHE_TTL.DASHBOARD);
 }

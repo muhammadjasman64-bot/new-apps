@@ -12,7 +12,7 @@ function getUnifiedRiskForStudent_(nisn){
   const calls=getPemanggilanHistory_({nisn:nisn});
   const actions=getTindakanHistory_({nisn:nisn});
 
-  const net=Math.max(0,Number(behavior.poinBersih)||0);
+  const net=Math.max(0,Number(behavior.poinPelanggaran)||0);
   const behaviorScore=Math.min(60,Number((net/100*60).toFixed(2)));
   let attendanceScore=0;
   if(attendance.total>0){

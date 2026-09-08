@@ -50,14 +50,42 @@ function deleteSiswa_(nisn){return setSiswaStatus_(nisn,'Nonaktif');}
 function restoreSiswa_(nisn){return setSiswaStatus_(nisn,'Aktif');}
 function importSiswaRows_(rows){
   if(!Array.isArray(rows)||!rows.length)throw new Error('Tidak ada data untuk diimpor.');
-  const sh=getSheet_(APP.SHEETS.SISWA),cfg=getConfigObject_(),lastCol=Math.max(sh.getLastColumn(),12),lastRow=sh.getLastRow();
-  const data=lastRow>=2?sh.getRange(1,1,lastRow,lastCol).getValues():[['ID','NISN','Nama_Siswa','Kelas','Jurusan','Tempat_Lahir','Tanggal_Lahir','Nama_Orang_Tua','Nomor_HP_Orang_Tua','Alamat','Status','Tahun_Pelajaran']],h=data[0].map(x=>String(x||'').trim().toLowerCase()),ni=h.indexOf('nisn');
-  const dataRows=data.slice(1),byNisn={};dataRows.forEach((r,i)=>{const n=String(r[ni>=0?ni:1]||'').trim();if(n)byNisn[n]=i+2;});
-  const clean=v=>v==null?'':String(v).trim(),normDate=v=>v instanceof Date?v:(clean(v)||'');
-  const updates=[],adds=[];let ok=0,skip=0,updated=0,inserted=0;
-  rows.forEach(r=>{const nisn=clean(r.NISN??r.nisn??r[0]),nama=clean(r.Nama_Siswa??r.Nama??r.nama??r[1]);if(!nisn||!nama){skip++;return;}const row=Array(lastCol).fill('');
-    const set=(key,val)=>{const i=h.indexOf(key.toLowerCase());if(i>=0)row[i]=val;};const existingRow=byNisn[nisn]?data[byNisn[nisn]-2].slice(0,lastCol):null;if(existingRow)existingRow.forEach((v,i)=>row[i]=v);
-    set('id',existingRow?row[h.indexOf('id')]:generateID_('SIS'));set('nisn',nisn);set('nama_siswa',nama);if(h.indexOf('nama_siswa')<0)set('nama',nama);set('kelas',clean(r.Kelas??r.kelas??r[2])||clean(cfg.Kelas));set('jurusan',clean(r.Jurusan??r.jurusan??r[3])||clean(cfg.Jurusan));set('tempat_lahir',clean(r.Tempat_Lahir??r.tempatLahir??r[4]));set('tanggal_lahir',normDate(r.Tanggal_Lahir??r.tanggalLahir??r[5]));set('nama_orang_tua',clean(r.Nama_Orang_Tua??r.orangTua??r[6]));set('nomor_hp_orang_tua',clean(r.Nomor_HP_Orang_Tua??r.hp??r[7]));set('alamat',clean(r.Alamat??r.alamat??r[8]));set('status',clean(r.Status??r.status??r[9])||'Aktif');set('tahun_pelajaran',clean(r.Tahun_Pelajaran??r.tahun??r[10])||getTahunPelajaran_());
-    const rr=byNisn[nisn];if(rr){updates.push({row:rr,values:row});updated++;}else{adds.push(row);inserted++;}ok++;
-  });updates.forEach(u=>sh.getRange(u.row,1,1,lastCol).setValues([u.values]));if(adds.length)sh.getRange(sh.getLastRow()+1,1,adds.length,lastCol).setValues(adds);clearAppCache_();PropertiesService.getScriptProperties().setProperty('DB_VERSION',String(Date.now()));logActivity_('IMPORT SISWA',ok+' diproses, '+inserted+' baru, '+updated+' diperbarui, '+skip+' dilewati');return{success:true,berhasil:ok,dilewati:skip,baru:inserted,diperbarui:updated};
+  const TEMPLATE=['NISN','Nama_Siswa','Kelas','Jurusan','Tempat_Lahir','Tanggal_Lahir','Nama_Orang_Tua','Nomor_HP_Orang_Tua','Alamat','Status','Tahun_Pelajaran'];
+  const DB_HEADERS=['ID_Siswa'].concat(TEMPLATE);
+  const clean=v=>v==null?'':String(v).trim();
+  const normalizeNisn=v=>clean(v).replace(/\.0$/,'');
+  const normalizeDate=v=>{if(v instanceof Date&&!isNaN(v.getTime()))return Utilities.formatDate(v,Session.getScriptTimeZone(),'yyyy-MM-dd');return clean(v);};
+
+  // Validasi seluruh file SEBELUM data lama disentuh.
+  const normalized=[];const seen={};
+  rows.forEach((r,i)=>{
+    const x={};TEMPLATE.forEach(k=>x[k]=r&&Object.prototype.hasOwnProperty.call(r,k)?r[k]:'');
+    const nisn=normalizeNisn(x.NISN),nama=clean(x.Nama_Siswa);
+    if(!/^\d{10}$/.test(nisn))throw new Error('Baris '+(i+2)+': NISN harus tepat 10 digit angka.');
+    if(!nama)throw new Error('Baris '+(i+2)+': Nama_Siswa wajib diisi.');
+    if(seen[nisn])throw new Error('Duplikat NISN dalam file pada baris '+(i+2)+': '+nisn);
+    seen[nisn]=true;
+    normalized.push({NISN:nisn,Nama_Siswa:nama,Kelas:clean(x.Kelas),Jurusan:clean(x.Jurusan),Tempat_Lahir:clean(x.Tempat_Lahir),Tanggal_Lahir:normalizeDate(x.Tanggal_Lahir),Nama_Orang_Tua:clean(x.Nama_Orang_Tua),Nomor_HP_Orang_Tua:clean(x.Nomor_HP_Orang_Tua),Alamat:clean(x.Alamat),Status:clean(x.Status)||'Aktif',Tahun_Pelajaran:clean(x.Tahun_Pelajaran)||getTahunPelajaran_()});
+  });
+
+  const lock=LockService.getScriptLock();lock.waitLock(10000);
+  try{
+    const sh=getSheet_(APP.SHEETS.SISWA),lastCol=12;
+    // Master DATA_SISWA bersifat CURRENT SNAPSHOT: upload baru menggantikan seluruh daftar siswa lama.
+    // Data ABSENSI/PELANGGARAN/PENGHARGAAN tidak disentuh sehingga histori tetap dapat di-recall.
+    if(sh.getMaxColumns()<lastCol)sh.insertColumnsAfter(sh.getMaxColumns(),lastCol-sh.getMaxColumns());
+    sh.getRange(1,1,1,lastCol).setValues([DB_HEADERS]);
+    const values=normalized.map(x=>[generateID_('SIS'),x.NISN,x.Nama_Siswa,x.Kelas,x.Jurusan,x.Tempat_Lahir,x.Tanggal_Lahir,x.Nama_Orang_Tua,x.Nomor_HP_Orang_Tua,x.Alamat,x.Status,x.Tahun_Pelajaran]);
+    const oldRows=sh.getLastRow();
+    if(oldRows>1)sh.getRange(2,1,oldRows-1,lastCol).clearContent();
+    if(values.length)sh.getRange(2,1,values.length,lastCol).setValues(values);
+    // Hapus sisa baris lama secara fisik agar tidak ada data siswa lama yang masih terbaca.
+    const totalRows=sh.getMaxRows(),needed=values.length+1;
+    if(totalRows>needed)sh.deleteRows(needed+1,totalRows-needed);
+    sh.getRange(2,2,Math.max(values.length,1),1).setNumberFormat('@');
+    sh.getRange(2,9,Math.max(values.length,1),1).setNumberFormat('@');
+    clearAppCache_();PropertiesService.getScriptProperties().setProperty('DB_VERSION',String(Date.now()));
+    logActivity_('IMPORT SISWA - REPLACE',normalized.length+' siswa aktif pada master terbaru. Data master lama digantikan; histori absensi/pelanggaran/penghargaan dipertahankan.');
+    return{success:true,berhasil:normalized.length,dilewati:0,baru:normalized.length,diperbarui:0,diganti:oldRows>1?oldRows-1:0,mode:'REPLACE_ALL',template:TEMPLATE,message:'Data siswa lama pada DATA_SISWA telah diganti seluruhnya dengan data dari template. Histori absensi dan catatan lain tidak dihapus.'};
+  }finally{lock.releaseLock();}
 }
