@@ -4,7 +4,7 @@ function getSiswa_(){
   if(cached) return cached;
   const sh=getSheet_(APP.SHEETS.SISWA), lastRow=sh.getLastRow(), lastCol=sh.getLastColumn();
   if(lastRow<2||lastCol<2)return [];
-  const v=sh.getRange(1,1,lastRow,lastCol).getValues(), h=v[0].map(x=>String(x||'').trim().toLowerCase());
+  const v=sh.getRange(1,1,lastRow,lastCol).getDisplayValues(), h=v[0].map(x=>String(x||'').trim().toLowerCase());
   const nisnCol=h.indexOf('nisn'),namaCol=h.indexOf('nama_siswa')>=0?h.indexOf('nama_siswa'):h.indexOf('nama'),kelasCol=h.indexOf('kelas'),jurusanCol=h.indexOf('jurusan'),statusCol=h.indexOf('status');
   let out=[];
   if(nisnCol>=0&&namaCol>=0){
@@ -25,7 +25,7 @@ function saveSiswa_(obj){
   const nisn=String(obj.nisn).trim();
   if(!/^\d{10}$/.test(nisn))throw new Error('NISN harus 10 digit angka.');
   const sh=getSheet_(APP.SHEETS.SISWA),lastCol=Math.max(sh.getLastColumn(),12),lastRow=sh.getLastRow();
-  const data=lastRow>=2?sh.getRange(1,1,lastRow,lastCol).getValues():[['ID','NISN','Nama_Siswa','Kelas','Jurusan','Tempat_Lahir','Tanggal_Lahir','Nama_Orang_Tua','Nomor_HP_Orang_Tua','Alamat','Status','Tahun_Pelajaran']];
+  const data=lastRow>=2?sh.getRange(1,1,lastRow,lastCol).getDisplayValues():[['ID','NISN','Nama_Siswa','Kelas','Jurusan','Tempat_Lahir','Tanggal_Lahir','Nama_Orang_Tua','Nomor_HP_Orang_Tua','Alamat','Status','Tahun_Pelajaran']];
   const h=data[0].map(x=>String(x||'').trim().toLowerCase());
   const col=k=>h.indexOf(k.toLowerCase());
   const ni=col('nisn'), idx=data.findIndex((r,i)=>i>0&&String(r[ni>=0?ni:1]||'').trim()===nisn);
@@ -42,7 +42,7 @@ function saveSiswa_(obj){
 }
 function setSiswaStatus_(nisn,status){
   const sh=getSheet_(APP.SHEETS.SISWA),lastRow=sh.getLastRow(),lastCol=sh.getLastColumn();if(lastRow<2)throw new Error('Data siswa kosong.');
-  const data=sh.getRange(1,1,lastRow,lastCol).getValues(),h=data[0].map(x=>String(x||'').trim().toLowerCase()),ni=h.indexOf('nisn'),si=h.indexOf('status');
+  const data=sh.getRange(1,1,lastRow,lastCol).getDisplayValues(),h=data[0].map(x=>String(x||'').trim().toLowerCase()),ni=h.indexOf('nisn'),si=h.indexOf('status');
   const idx=data.findIndex((r,i)=>i>0&&String(r[ni>=0?ni:1]||'').trim()===String(nisn).trim());if(idx<1)throw new Error('Siswa tidak ditemukan.');if(si<0)throw new Error('Kolom Status tidak ditemukan.');
   sh.getRange(idx+1,si+1).setValue(status);clearAppCache_();PropertiesService.getScriptProperties().setProperty('DB_VERSION',String(Date.now()));logActivity_(status==='Aktif'?'AKTIFKAN SISWA':'NONAKTIFKAN SISWA',String(nisn));return{success:true,status};
 }
@@ -78,12 +78,16 @@ function importSiswaRows_(rows){
     const values=normalized.map(x=>[generateID_('SIS'),x.NISN,x.Nama_Siswa,x.Kelas,x.Jurusan,x.Tempat_Lahir,x.Tanggal_Lahir,x.Nama_Orang_Tua,x.Nomor_HP_Orang_Tua,x.Alamat,x.Status,x.Tahun_Pelajaran]);
     const oldRows=sh.getLastRow();
     if(oldRows>1)sh.getRange(2,1,oldRows-1,lastCol).clearContent();
-    if(values.length)sh.getRange(2,1,values.length,lastCol).setValues(values);
+    // NISN dan nomor HP HARUS diperlakukan sebagai teks sebelum data ditulis.
+    // Ini mencegah Google Sheets mengubah 10 digit berawalan 0 menjadi angka.
+    if(values.length){
+      sh.getRange(2,2,values.length,1).setNumberFormat('@');
+      sh.getRange(2,9,values.length,1).setNumberFormat('@');
+      sh.getRange(2,1,values.length,lastCol).setValues(values);
+    }
     // Hapus sisa baris lama secara fisik agar tidak ada data siswa lama yang masih terbaca.
     const totalRows=sh.getMaxRows(),needed=values.length+1;
     if(totalRows>needed)sh.deleteRows(needed+1,totalRows-needed);
-    sh.getRange(2,2,Math.max(values.length,1),1).setNumberFormat('@');
-    sh.getRange(2,9,Math.max(values.length,1),1).setNumberFormat('@');
     clearAppCache_();PropertiesService.getScriptProperties().setProperty('DB_VERSION',String(Date.now()));
     logActivity_('IMPORT SISWA - REPLACE',normalized.length+' siswa aktif pada master terbaru. Data master lama digantikan; histori absensi/pelanggaran/penghargaan dipertahankan.');
     return{success:true,berhasil:normalized.length,dilewati:0,baru:normalized.length,diperbarui:0,diganti:oldRows>1?oldRows-1:0,mode:'REPLACE_ALL',template:TEMPLATE,message:'Data siswa lama pada DATA_SISWA telah diganti seluruhnya dengan data dari template. Histori absensi dan catatan lain tidak dihapus.'};
