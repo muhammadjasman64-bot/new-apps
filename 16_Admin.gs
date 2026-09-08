@@ -3,9 +3,16 @@
  */
 function getAdminSummary_(){
   const ss=getSS_();
-  const sheets=ss.getSheets().map(sh=>({name:sh.getName(),rows:Math.max(0,sh.getLastRow()-1),columns:sh.getLastColumn()}));
-  return {spreadsheetId:ss.getId(),name:ss.getName(),url:ss.getUrl(),updated:new Date(),sheets:sheets,dbVersion:getDbVersion_()};
+  if(!ss) throw new Error('Spreadsheet aktif tidak ditemukan. Pastikan Web App terikat pada spreadsheet yang benar.');
+  const sheets=ss.getSheets().map(function(sh){
+    return {name:sh.getName(),rows:Math.max(0,sh.getLastRow()-1),columns:sh.getLastColumn()};
+  });
+  const name=String(ss.getName()||'Spreadsheet');
+  const url=String(ss.getUrl()||'');
+  const dbVersion=typeof getDbVersion_==='function'?String(getDbVersion_()||'1'):'1';
+  return {success:true,spreadsheetId:ss.getId(),name:name,url:url,updated:new Date(),sheets:sheets,dbVersion:dbVersion};
 }
+
 function backupDatabase_(){
   const ss=getSS_();
   const stamp=Utilities.formatDate(new Date(),Session.getScriptTimeZone(),'yyyyMMdd_HHmmss');
