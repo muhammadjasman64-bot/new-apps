@@ -35,6 +35,9 @@ function setupDatabase_() {
   seedMasterPembinaanOfficial_();
   if(typeof seedDefaultAdmin_==='function') seedDefaultAdmin_();
   if(typeof lockOfficialRuleSheets_==='function') lockOfficialRuleSheets_();
+  if(typeof ensureDatabaseSheetsBlank_==='function') ensureDatabaseSheetsBlank_();
+  if(typeof protectDatabaseSheets_==='function') protectDatabaseSheets_();
+  PropertiesService.getScriptProperties().setProperty('WEB_APP_URL', ScriptApp.getService().getUrl() || '');
   return 'OK: database, CONFIG, dan master aturan resmi berhasil disiapkan dan dikunci.';
 }
 
