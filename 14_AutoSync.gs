@@ -1,7 +1,7 @@
 /** 14_AutoSync.gs - sinkronisasi ringan. Rekap hanya periode aktif. */
 function onEdit(e){
   try{
-    if(!e||!e.range)return;const name=e.range.getSheet_().getName();
+    if(!e||!e.range)return;const name=e.range.getSheet().getName();
     const source=[APP.SHEETS.CONFIG,APP.SHEETS.SISWA,APP.SHEETS.ABSENSI,APP.SHEETS.PELANGGARAN,APP.SHEETS.PENGHARGAAN,APP.SHEETS.MASTER_PELANGGARAN,APP.SHEETS.MASTER_PENGHARGAAN,APP.SHEETS.MASTER_PEMBINAAN,APP.SHEETS.TINDAKAN,APP.SHEETS.PEMANGGILAN];
     if(!source.includes(name))return;
     if(e.range.getRow()===1)return;

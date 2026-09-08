@@ -26,7 +26,7 @@ function saveTindakanManual_(){ throw new Error('Tindakan pembinaan ditentukan o
 function savePemanggilan_(obj) {
   const s=findStudentByNisn_(obj.nisn); if(!s) throw new Error('Siswa tidak ditemukan.');
   const cfg=getConfigObject_(), p=getProfilPembinaan_(s.nisn);
-  getSheet_(APP.SHEETS.PEMANGGILAN).appendRow([generateID_('PGL'),parseDateInput_(obj.tanggal)||new Date(),s.nisn,s.nama,
+  getSheet_(APP.SHEETS.PEMANGGILAN_ORANG_TUA).appendRow([generateID_('PGL'),parseDateInput_(obj.tanggal)||new Date(),s.nisn,s.nama,
     p.poinBersih,Number(obj.ke)||p.keputusan.pemanggilan,obj.pihak||'',obj.hasil||'',obj.tindakLanjut||'',obj.status||'Selesai',
     cfg.Tahun_Pelajaran||getTahunPelajaran_(),cfg.Semester||getSemesterAktif_()]);
   return {success:true};

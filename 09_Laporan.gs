@@ -9,14 +9,14 @@ function renderReportHtml_(type,params){const r=getReportData_(type,params); ret
 function pdfRequestKey_(type,params){const raw=JSON.stringify({type:type||'rekap',params:params||{}});const digest=Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,raw);return cacheKey_('PDF_RESULT',[Utilities.base64EncodeWebSafe(digest).replace(/=+$/,'')]);}
 function buildPdfResult_(file){
   const id=file.getId(),url='https://drive.google.com/uc?export=download&id='+encodeURIComponent(id);
-  return {success:true,name:file.getName(),url:file.getUrl(),downloadUrl:url,id:id,mimeType:'application/pdf',size:file.getSize()};
+  return {success:true,name:file.getName(),id:id,mimeType:'application/pdf',size:file.getSize()};
 }
 function buildPdfClientResult_(file){
   const meta=buildPdfResult_(file),blob=file.getBlob();
   if(blob.getContentType()!==MimeType.PDF)throw new Error('File PDF tidak valid.');
   const bytes=blob.getBytes();
   if(!bytes.length)throw new Error('File PDF kosong.');
-  return {success:true,name:meta.name,id:meta.id,mimeType:MimeType.PDF,size:bytes.length,downloadUrl:meta.downloadUrl,dataBase64:Utilities.base64Encode(bytes)};
+  return {success:true,name:meta.name,id:meta.id,mimeType:MimeType.PDF,size:bytes.length,dataBase64:Utilities.base64Encode(bytes)};
 }
 function createPdfFromReport_(type,params){
   const key=pdfRequestKey_(type,params),cached=cacheGetJson_(key);
