@@ -8,7 +8,7 @@ function getReportData_(type,params){
 function renderReportHtml_(type,params){const r=getReportData_(type,params); return type==='detail'?buildDetailReportHtml_(r):buildReportHtml_(r);}
 function pdfRequestKey_(type,params){const raw=JSON.stringify({type:type||'rekap',params:params||{}});const digest=Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,raw);return cacheKey_('PDF_RESULT',[Utilities.base64EncodeWebSafe(digest).replace(/=+$/,'')]);}
 function buildPdfResult_(file){
-  const id=file.getId(),url='https://drive.google.com/uc?export=download&id='+encodeURIComponent(id);
+  const id=file.getId();
   return {success:true,name:file.getName(),id:id,mimeType:'application/pdf',size:file.getSize()};
 }
 function buildPdfClientResult_(file){

@@ -1,6 +1,6 @@
 /**
  * ================================================================
- * JURNAL WALI KELAS DIGITAL - V42.7
+ * JURNAL WALI KELAS DIGITAL - V43.5
  * PUBLIC RUN ENTRY POINTS
  * ================================================================
  *
@@ -91,7 +91,7 @@ function systemHealthCheck() {
 
   return {
     ok: missing.length === 0,
-    version: 'V42.7',
+    version: 'V43.5',
     message: missing.length ? 'Ada fungsi inti yang tidak ditemukan.' : 'Public Run entry points OK. Auth/DB wrappers tersedia.',
     missing: missing
   };
