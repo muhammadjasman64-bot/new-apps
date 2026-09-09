@@ -1,5 +1,5 @@
 /**
- * V41 - UNIFIED STUDENT RISK ENGINE
+ * V44.6 - UNIFIED STUDENT RISK CALIBRATION
  *
  * Menggabungkan indikator absensi dan pembinaan dalam satu profil monitoring.
  * CATATAN PENTING: Indeks 0-100 di bawah adalah INDEKS MONITORING APLIKASI,
@@ -16,10 +16,10 @@ function getUnifiedRiskForStudent_(nisn){
   const behaviorScore=Math.min(60,Number((net/100*60).toFixed(2)));
   let attendanceScore=0;
   if(attendance.total>0){
-    if(attendance.kehadiran<90) attendanceScore=40;
-    else if(attendance.kehadiran<93) attendanceScore=30;
-    else if(attendance.kehadiran<95) attendanceScore=20;
-    else if(attendance.kehadiran<97) attendanceScore=10;
+    if(attendance.kehadiran<85) attendanceScore=40;
+    else if(attendance.kehadiran<90) attendanceScore=30;
+    else if(attendance.kehadiran<93) attendanceScore=20;
+    else if(attendance.kehadiran<95) attendanceScore=10;
   }
   if(attendance.annualLimitExceeded) attendanceScore=Math.max(attendanceScore,40);
   const index=Math.min(100,Number((behaviorScore+attendanceScore).toFixed(2)));
@@ -52,7 +52,7 @@ function tanggalSafe_(v){return v||'';}
 function getUnifiedRiskSummary_(){
   const cached=cacheGetJson_('UNIFIED_RISK_SUMMARY_CACHE');if(cached)return cached;
   const att=getAttendanceRiskSummary_(),behavior=getStatusAlertSummary_(),bm=Object.fromEntries((behavior.attention||[]).map(x=>[String(x.nisn),x]));
-  const items=(att.items||[]).map(a=>{const b=bm[String(a.nisn)],net=b?Number(b.poinBersih)||0:0;let attendanceScore=0;if(Number(a.total)>0){if(Number(a.kehadiran)<90)attendanceScore=40;else if(Number(a.kehadiran)<93)attendanceScore=30;else if(Number(a.kehadiran)<95)attendanceScore=20;else if(Number(a.kehadiran)<97)attendanceScore=10;}if(a.annualLimitExceeded)attendanceScore=Math.max(attendanceScore,40);const behaviorScore=Math.min(60,Number((net/100*60).toFixed(2))),index=Math.min(100,Number((behaviorScore+attendanceScore).toFixed(2)));let level='AMAN';if(index>=75)level='RISIKO TINGGI';else if(index>=50)level='RISIKO MENENGAH';else if(index>=25)level='PERLU PERHATIAN';const urgent=!!a.urgent||!!(b&&b.urgent)||index>=75,reasons=[];if(b&&b.attention)reasons.push('Pembinaan: '+b.status);if(a.riskLevel!=='LOW'&&a.riskLevel!=='NO_DATA')reasons.push('Absensi: '+a.riskLabel);if(a.annualLimitExceeded)reasons.push('Alpa tahunan melewati batas');if(!reasons.length)reasons.push('Tidak ada indikator risiko utama.');return {nisn:a.nisn,nama:a.nama,kelas:a.kelas,tahunPelajaran:a.tahunPelajaran,semester:a.semester,indeksMonitoring:index,level:level,urgent:urgent,alasan:reasons.join(' • '),behavior:{poinPelanggaran:b?b.poinPelanggaran:0,poinPenghargaan:b?b.poinPenghargaan:0,poinBersih:net,status:b?b.status:'NORMAL',pemanggilan:b?b.pemanggilan:0,pihak:b?b.pihak:'',tindakan:b?b.tindakan:'',dokumen:b?b.dokumen:''},attendance:{kehadiran:a.kehadiran,alphaSemester:a.A,alphaTahunan:a.alphaAnnual,riskLevel:a.riskLevel,riskLabel:a.riskLabel},components:{pembinaan:behaviorScore,absensi:attendanceScore}};});
+  const items=(att.items||[]).map(a=>{const b=bm[String(a.nisn)],net=b?Number(b.poinBersih)||0:0;let attendanceScore=0;if(Number(a.total)>0){if(Number(a.kehadiran)<85)attendanceScore=40;else if(Number(a.kehadiran)<90)attendanceScore=30;else if(Number(a.kehadiran)<93)attendanceScore=20;else if(Number(a.kehadiran)<95)attendanceScore=10;}if(a.annualLimitExceeded)attendanceScore=Math.max(attendanceScore,40);const behaviorScore=Math.min(60,Number((net/100*60).toFixed(2))),index=Math.min(100,Number((behaviorScore+attendanceScore).toFixed(2)));let level='AMAN';if(index>=75)level='RISIKO TINGGI';else if(index>=50)level='RISIKO MENENGAH';else if(index>=25)level='PERLU PERHATIAN';const urgent=!!a.urgent||!!(b&&b.urgent)||index>=75,reasons=[];if(b&&b.attention)reasons.push('Pembinaan: '+b.status);if(a.riskLevel!=='LOW'&&a.riskLevel!=='NO_DATA')reasons.push('Absensi: '+a.riskLabel);if(a.annualLimitExceeded)reasons.push('Alpa tahunan melewati batas');if(!reasons.length)reasons.push('Tidak ada indikator risiko utama.');return {nisn:a.nisn,nama:a.nama,kelas:a.kelas,tahunPelajaran:a.tahunPelajaran,semester:a.semester,indeksMonitoring:index,level:level,urgent:urgent,alasan:reasons.join(' • '),behavior:{poinPelanggaran:b?b.poinPelanggaran:0,poinPenghargaan:b?b.poinPenghargaan:0,poinBersih:net,status:b?b.status:'NORMAL',pemanggilan:b?b.pemanggilan:0,pihak:b?b.pihak:'',tindakan:b?b.tindakan:'',dokumen:b?b.dokumen:''},attendance:{kehadiran:a.kehadiran,alphaSemester:a.A,alphaTahunan:a.alphaAnnual,riskLevel:a.riskLevel,riskLabel:a.riskLabel},components:{pembinaan:behaviorScore,absensi:attendanceScore}};});
   items.sort((a,b)=>Number(b.indeksMonitoring)-Number(a.indeksMonitoring)||Number(b.urgent)-Number(a.urgent));
   const counts={'AMAN':0,'PERLU PERHATIAN':0,'RISIKO MENENGAH':0,'RISIKO TINGGI':0};items.forEach(x=>counts[x.level]=(counts[x.level]||0)+1);
   return cachePutJson_('UNIFIED_RISK_SUMMARY_CACHE',{success:true,totalSiswa:items.length,counts:counts,totalUrgent:items.filter(x=>x.urgent).length,items:items,top:items.slice(0,20)},CACHE_TTL.DASHBOARD);

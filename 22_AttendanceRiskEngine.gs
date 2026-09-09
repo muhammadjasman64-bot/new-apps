@@ -1,5 +1,5 @@
 /**
- * V40 - AUTOMATIC ATTENDANCE RISK ENGINE
+ * V44.6 - ATTENDANCE RISK CALIBRATION ENGINE
  * Risiko absensi dihitung real-time untuk semester aktif.
  * Dasar kebijakan: kehadiran minimum 90% per semester, maksimal Alpa 14 hari/semester,
  * dan maksimal Alpa 28 hari/tahun pelajaran.
@@ -23,12 +23,18 @@ function getActiveSemesterBounds_(){
 function classifyAttendanceRisk_(attendance,alpha,records,policy){
   attendance=Number(attendance||0); alpha=Number(alpha||0); records=Number(records||0);
   if(records<=0)return {level:'NO_DATA',label:'Belum Ada Data',reason:'Belum terdapat data absensi pada semester aktif.',urgent:false};
-  if(alpha>policy.maxAlphaSemester || attendance<policy.minAttendance)
-    return {level:'CRITICAL',label:'Risiko Tinggi',reason:alpha>policy.maxAlphaSemester?'Alpa telah melewati batas semester.':'Kehadiran berada di bawah minimum 90%.',urgent:true};
-  if(alpha>=Math.max(1,policy.maxAlphaSemester-4) || attendance<93)
-    return {level:'HIGH',label:'Perlu Tindakan',reason:alpha>=Math.max(1,policy.maxAlphaSemester-4)?'Jumlah Alpa mendekati batas semester.':'Kehadiran mendekati batas minimum.',urgent:true};
-  if(alpha>=5 || attendance<95)
-    return {level:'MEDIUM',label:'Perlu Perhatian',reason:'Tren kehadiran perlu dipantau.',urgent:false};
+  if(alpha>policy.maxAlphaSemester)
+    return {level:'CRITICAL',label:'Risiko Tinggi',reason:'Alpa telah melewati batas semester.',urgent:true};
+  if(alpha>=Math.max(1,policy.maxAlphaSemester-4))
+    return {level:'HIGH',label:'Perlu Tindakan',reason:'Jumlah Alpa mendekati batas semester.',urgent:true};
+  if(attendance<85)
+    return {level:'HIGH',label:'Risiko Tinggi',reason:'Kehadiran sangat rendah dan jauh di bawah minimum 90%.',urgent:true};
+  if(attendance<policy.minAttendance)
+    return {level:'MEDIUM',label:'Di Bawah Standar',reason:'Kehadiran di bawah minimum 90%; perlu perhatian dan pembinaan.',urgent:false};
+  if(attendance<93 || alpha>=5)
+    return {level:'MEDIUM',label:'Perlu Perhatian',reason:'Kehadiran mendekati batas minimum atau jumlah Alpa perlu dipantau.',urgent:false};
+  if(attendance<95)
+    return {level:'LOW',label:'Aman - Pantau',reason:'Kehadiran masih memenuhi minimum, tetapi perlu dipantau.',urgent:false};
   return {level:'LOW',label:'Aman',reason:'Kehadiran masih dalam batas aman.',urgent:false};
 }
 
