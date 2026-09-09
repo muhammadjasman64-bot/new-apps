@@ -100,3 +100,6 @@ function systemHealthCheck() {
     missing: missing
   };
 }
+
+function syncNisnDatabase(){return syncNisnDatabase_();}
+function validateNisnIntegrity(){return validateNisnIntegrity_();}

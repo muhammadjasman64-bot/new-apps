@@ -46,6 +46,24 @@ function getTahunPelajaran_(){ return String(getConfigObject_().Tahun_Pelajaran|
 function getSemesterAktif_(){ return String(getConfigObject_().Semester||APP.CONFIG_DEFAULTS.Semester); }
 function escapeHtmlServer_(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
+/** Canonical NISN: selalu mengikuti NISN pada DATA_SISWA. */
+function canonicalNisn_(value){
+  const raw=String(value==null?'':value).trim().replace(/\.0$/,'');
+  if(!raw)return '';
+  const siswa=typeof getSiswa_==='function'?getSiswa_():[];
+  for(const x of siswa){if(String(x.nisn||'').trim()===raw)return String(x.nisn).trim();}
+  if(/^\d+$/.test(raw)){
+    const padded=raw.padStart(10,'0');
+    for(const x of siswa){if(String(x.nisn||'').trim()===padded)return padded;}
+  }
+  return raw;
+}
+function canonicalNisnForStudent_(value){
+  const n=canonicalNisn_(value);
+  if(/^\d{10}$/.test(n))return n;
+  return n;
+}
+
 function repairConfig_(){
   const sh=getSheet_(APP.SHEETS.CONFIG);
   const existing=sh.getDataRange().getValues();

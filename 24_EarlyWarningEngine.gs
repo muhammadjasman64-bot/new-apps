@@ -47,7 +47,7 @@ function evaluateEarlyWarningAll_(){
 function getEarlyWarningSummary_(){
   const cached=cacheGetJson_('EARLY_WARNING_SUMMARY_CACHE');if(cached)return cached;
   const sh=getSheet_(APP.SHEETS.PERINGATAN_DINI), rows=sh.getLastRow()>1?sh.getRange(2,1,sh.getLastRow()-1,19).getValues():[];
-  const open=rows.filter(r=>String(r[16]||'OPEN')!=='SELESAI').map(r=>({id:r[0],timestamp:r[1],nisn:r[2],nama:r[3],tahunPelajaran:r[4],semester:r[5],severity:r[6],jenis:r[7],indeksSebelum:r[8],indeksSesudah:r[9],levelSebelum:r[10],levelSesudah:r[11],kehadiran:r[12],alpha:r[13],poin:r[14],rekomendasi:r[15],status:r[16]}));
+  const open=rows.filter(r=>String(r[16]||'OPEN')!=='SELESAI').map(r=>({id:r[0],timestamp:r[1],nisn:canonicalNisn_(r[2]),nama:r[3],tahunPelajaran:r[4],semester:r[5],severity:r[6],jenis:r[7],indeksSebelum:r[8],indeksSesudah:r[9],levelSebelum:r[10],levelSesudah:r[11],kehadiran:r[12],alpha:r[13],poin:r[14],rekomendasi:r[15],status:r[16]}));
   const counts={HIGH:0,MEDIUM:0,INFO:0};open.forEach(x=>counts[x.severity]=(counts[x.severity]||0)+1);
   return cachePutJson_('EARLY_WARNING_SUMMARY_CACHE',{success:true,totalOpen:open.length,counts:counts,items:open.slice(-50).reverse()},CACHE_TTL.DASHBOARD);
 }

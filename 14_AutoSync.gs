@@ -5,6 +5,12 @@ function onEdit(e){
     const source=[APP.SHEETS.CONFIG,APP.SHEETS.SISWA,APP.SHEETS.ABSENSI,APP.SHEETS.PELANGGARAN,APP.SHEETS.PENGHARGAAN,APP.SHEETS.MASTER_PELANGGARAN,APP.SHEETS.MASTER_PENGHARGAAN,APP.SHEETS.MASTER_PEMBINAAN,APP.SHEETS.TINDAKAN,APP.SHEETS.PEMANGGILAN_ORANG_TUA];
     if(!source.includes(name))return;
     if(e.range.getRow()===1)return;
+    // Satu sumber NISN: setiap perubahan manual pada kolom NISN disamakan dengan DATA_SISWA.
+    if(e.range.getRow()>1 && ['DATA_SISWA','ABSENSI','PELANGGARAN','PENGHARGAAN','TINDAKAN','PEMANGGILAN_ORANG_TUA','CATATAN_WALI_KELAS','CATATAN_BK','REKAP_HARIAN','REKAP_BULANAN','REKAP_SEMESTER','REKAP_TAHUNAN','PERINGATAN_DINI'].includes(name)){
+      const h=e.range.getSheet().getRange(1,1,1,e.range.getSheet().getLastColumn()).getDisplayValues()[0].map(dbNormalizeHeader_);
+      const cn=dbFindColumn_(Object.fromEntries(h.map((x,i)=>[x,i])),['NISN','NIS','Nomor Induk Siswa Nasional']);
+      if(cn>=0 && e.range.getColumn()===cn+1){const cell=e.range.getSheet().getRange(e.range.getRow(),cn+1);const old=cell.getDisplayValue();const neu=canonicalNisn_(old);cell.setNumberFormat('@');if(neu!==old)cell.setValue(neu);}
+    }
     if([APP.SHEETS.MASTER_PELANGGARAN,APP.SHEETS.MASTER_PENGHARGAAN,APP.SHEETS.MASTER_PEMBINAAN].includes(name)){
       enforceOfficialRules_();
       return;

@@ -97,7 +97,7 @@ function api(name,args,token){
     }
   }catch(e){ return {success:false,message:e&&e.message?e.message:String(e)}; }
 }
-function findStudentByNisn_(nisn){return getSiswa_().find(s=>String(s.nisn).trim()===String(nisn).trim());}
+function findStudentByNisn_(nisn){const key=canonicalNisn_(nisn);return getSiswa_().find(s=>String(s.nisn).trim()===key);}
 function parseDateInput_(v){if(!v)return null;if(v instanceof Date&&!isNaN(v.getTime()))return new Date(v.getTime());const s=String(v).trim();let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);if(m)return new Date(+m[1],+m[2]-1,+m[3]);m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);if(m)return new Date(+m[3],+m[2]-1,+m[1]);const dt=new Date(s);return isNaN(dt.getTime())?null:dt;}
 function formatDateKey_(v){const d=new Date(v);return Utilities.formatDate(d,Session.getScriptTimeZone(),'yyyy-MM-dd');}
 function formatInputDate_(v){return Utilities.formatDate(new Date(v),Session.getScriptTimeZone(),'yyyy-MM-dd');}
