@@ -10,6 +10,7 @@ function saveCatatanGeneric_(sheetName,obj){
   const c=getConfigObject_();
   getSheet_(sheetName).appendRow([generateID_('CAT'),parseDateInput_(obj.tanggal)||new Date(),s.nisn,s.nama,obj.catatan||'',obj.tindakLanjut||'',
     Session.getActiveUser().getEmail()||'WebApp',c.Tahun_Pelajaran||getTahunPelajaran_(),c.Semester||getSemesterAktif_()]);
+  if(typeof syncNisnDatabase_==='function')syncNisnDatabase_();
   return {success:true};
 }
 function getCatatan_(sheetName,nisn){

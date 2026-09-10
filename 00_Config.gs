@@ -51,13 +51,19 @@ function canonicalNisn_(value){
   const raw=String(value==null?'':value).trim().replace(/\.0$/,'');
   if(!raw)return '';
   const siswa=typeof getSiswa_==='function'?getSiswa_():[];
-  for(const x of siswa){if(String(x.nisn||'').trim()===raw)return String(x.nisn).trim();}
+  const exact=siswa.find(x=>String(x.nisn||'').trim()===raw);
+  if(exact)return String(exact.nisn).trim();
   if(/^\d+$/.test(raw)){
     const padded=raw.padStart(10,'0');
-    for(const x of siswa){if(String(x.nisn||'').trim()===padded)return padded;}
+    const hit=siswa.find(x=>String(x.nisn||'').trim()===padded);
+    if(hit)return String(hit.nisn).trim();
+    const numeric=String(Number(raw));
+    const hit2=siswa.find(x=>String(Number(String(x.nisn||'').trim()))===numeric);
+    if(hit2)return String(hit2.nisn).trim();
   }
   return raw;
 }
+
 function canonicalNisnForStudent_(value){
   const n=canonicalNisn_(value);
   if(/^\d{10}$/.test(n))return n;

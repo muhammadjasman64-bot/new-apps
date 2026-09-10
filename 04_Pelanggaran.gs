@@ -47,6 +47,7 @@ function savePelanggaran_(obj) {
   const nr=sh.getLastRow();
   sh.getRange(nr,10,1,3).setValues([[Number(master.poin),keputusan.tindakan,'Total poin setelah pelanggaran: '+total+'. Status pembinaan: '+keputusan.status+'. '+keputusan.tindakan]]);
     syncTindakanUntukSiswa_(s.nisn);
+    if(typeof syncNisnDatabase_==='function')syncNisnDatabase_();
   logActivity_('INPUT PELANGGARAN',s.nisn+' / '+master.kode);
   return {success:true,poin:master.poin};
 }

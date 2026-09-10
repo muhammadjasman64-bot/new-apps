@@ -4,7 +4,7 @@
  */
 function earlyWarningKey_(nisn){return 'EW_SNAPSHOT_'+String(nisn).replace(/[^A-Za-z0-9_-]/g,'_')+'_'+String(getTahunPelajaran_()).replace(/[^A-Za-z0-9_-]/g,'_');}
 function getPreviousEarlyWarningSnapshot_(nisn){try{const v=PropertiesService.getScriptProperties().getProperty(earlyWarningKey_(nisn));return v?JSON.parse(v):null;}catch(e){return null;}}
-function saveEarlyWarningSnapshot_(x){PropertiesService.getScriptProperties().setProperty(earlyWarningKey_(x.nisn),JSON.stringify({ts:new Date().toISOString(),indeks:Number(x.indeksMonitoring)||0,level:x.level,kehadiran:Number(x.attendance.kehadiran)||0,alpha:Number(x.attendance.alphaSemester)||0,poin:Number(x.behavior.poinBersih)||0,status:x.behavior.status||''}));}
+function saveEarlyWarningSnapshot_(x){if(x&&x.nisn&&typeof canonicalNisn_==='function')x.nisn=canonicalNisn_(x.nisn);PropertiesService.getScriptProperties().setProperty(earlyWarningKey_(x.nisn),JSON.stringify({ts:new Date().toISOString(),indeks:Number(x.indeksMonitoring)||0,level:x.level,kehadiran:Number(x.attendance.kehadiran)||0,alpha:Number(x.attendance.alphaSemester)||0,poin:Number(x.behavior.poinBersih)||0,status:x.behavior.status||''}));}
 function buildEarlyWarning_(cur,prev){
   const reasons=[], actions=[]; let severity='INFO';
   const idx=Number(cur.indeksMonitoring)||0, pidx=prev?Number(prev.indeks)||0:null;

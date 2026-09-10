@@ -38,7 +38,7 @@ function savePenghargaan_(obj) {
   const sh=getSheet_(APP.SHEETS.PENGHARGAAN);
   sh.getRange(sh.getLastRow()+1,1,1,12).setValues([[generateID_('REW'),parseDateInput_(obj.tanggal)||new Date(),s.nisn,s.nama,obj.kelas||s.kelas,m.jenis,m.prestasi,Number(m.poin),obj.keterangan||'',Session.getActiveUser().getEmail()||'WebApp',cfg.Tahun_Pelajaran||getTahunPelajaran_(),cfg.Semester||getSemesterAktif_()]]);
   clearAppCache_();
-  syncTindakanUntukSiswa_(s.nisn); logActivity_('INPUT PENGHARGAAN',s.nisn+' / '+m.kode);
+  syncTindakanUntukSiswa_(s.nisn); if(typeof syncNisnDatabase_==='function')syncNisnDatabase_(); logActivity_('INPUT PENGHARGAAN',s.nisn+' / '+m.kode);
   return {success:true,poin:m.poin};
 }
 
