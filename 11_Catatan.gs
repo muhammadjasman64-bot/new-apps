@@ -10,7 +10,8 @@ function saveCatatanGeneric_(sheetName,obj){
   const c=getConfigObject_();
   getSheet_(sheetName).appendRow([generateID_('CAT'),parseDateInput_(obj.tanggal)||new Date(),s.nisn,s.nama,obj.catatan||'',obj.tindakLanjut||'',
     Session.getActiveUser().getEmail()||'WebApp',c.Tahun_Pelajaran||getTahunPelajaran_(),c.Semester||getSemesterAktif_()]);
-  return {success:true};
+  commitDatabaseMutation_();
+  return {success:true,nisn:s.nisn,nama:s.nama};
 }
 function getCatatan_(sheetName,nisn){
   return getSheet_(sheetName).getDataRange().getValues().slice(1).filter(r=>canonicalNisn_(r[2])===canonicalNisn_(nisn))
