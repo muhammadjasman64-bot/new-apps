@@ -22,11 +22,7 @@ function absensiMasterNisnMap_(){
   });
   return out;
 }
-function absensiCanonicalNisn_(value){
-  const raw=String(value==null?'':value).trim().replace(/\.0$/,''); if(!raw)return '';
-  const m=absensiMasterNisnMap_();
-  return m[raw] || m[raw.padStart(10,'0')] || (/^\d+$/.test(raw)?raw.padStart(10,'0'):raw);
-}
+function absensiCanonicalNisn_(value){ return canonicalNisn_(value); }
 function absensiSyncAllNisnToMaster_(){
   const master=absensiMasterNisnMap_();
   const names=[APP.SHEETS.ABSENSI,APP.SHEETS.PELANGGARAN,APP.SHEETS.PENGHARGAAN,APP.SHEETS.TINDAKAN,APP.SHEETS.PEMANGGILAN_ORANG_TUA,APP.SHEETS.CATATAN_WALI_KELAS,APP.SHEETS.CATATAN_BK,APP.SHEETS.REKAP_HARIAN,APP.SHEETS.REKAP_BULANAN,APP.SHEETS.REKAP_SEMESTER,APP.SHEETS.REKAP_TAHUNAN,APP.SHEETS.PERINGATAN_DINI];
@@ -78,8 +74,6 @@ function saveAbsensi_(records){
   });
   updates.forEach(u=>sh.getRange(u.row,1,1,lastCol).setValues([u.values]));
   if(adds.length)sh.getRange(sh.getLastRow()+1,1,adds.length,lastCol).setValues(adds);
-  absensiSyncAllNisnToMaster_();
-  if(typeof syncNisnDatabase_==='function')syncNisnDatabase_();
   clearAppCache_();PropertiesService.getScriptProperties().setProperty('DB_VERSION',String(Date.now()));logActivity_('INPUT ABSENSI',inserted+' baru, '+updated+' diperbarui');
   return{success:true,count:inserted+updated,inserted:inserted,updated:updated,date:formatDateKey_(parseDateInput_(records[0].tanggal)||now)};
 }

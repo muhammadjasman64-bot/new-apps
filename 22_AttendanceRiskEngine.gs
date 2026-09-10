@@ -41,8 +41,8 @@ function classifyAttendanceRisk_(attendance,alpha,records,policy){
 function getAttendanceRiskForStudent_(nisn){
   const ctx=getActiveSemesterBounds_(),policy=getAttendancePolicy_(),s=findStudentByNisn_(nisn);
   if(!s)throw new Error('Siswa tidak ditemukan: '+nisn);
-  const a=getRekapAbsensi_('semester',ctx.year,null,ctx.semester,'').find(x=>String(x.nisn).trim()===String(nisn).trim())||Object.assign({},s,{H:0,S:0,I:0,A:0,T:0,D:0,total:0,kehadiran:0});
-  const annual=getRekapAbsensi_('tahunan',ctx.year,null,null,'').find(x=>String(x.nisn).trim()===String(nisn).trim())||Object.assign({},s,{H:0,S:0,I:0,A:0,T:0,D:0,total:0,kehadiran:0});
+  const a=getRekapAbsensi_('semester',ctx.year,null,ctx.semester,'').find(x=>canonicalNisn_(x.nisn)===canonicalNisn_(nisn))||Object.assign({},s,{H:0,S:0,I:0,A:0,T:0,D:0,total:0,kehadiran:0});
+  const annual=getRekapAbsensi_('tahunan',ctx.year,null,null,'').find(x=>canonicalNisn_(x.nisn)===canonicalNisn_(nisn))||Object.assign({},s,{H:0,S:0,I:0,A:0,T:0,D:0,total:0,kehadiran:0});
   const risk=classifyAttendanceRisk_(a.kehadiran,a.A,a.total,policy);
   const alphaAnnual=Number(annual.A||0);
   const annualLimitExceeded=alphaAnnual>policy.maxAlphaAnnual;

@@ -46,24 +46,31 @@ function getTahunPelajaran_(){ return String(getConfigObject_().Tahun_Pelajaran|
 function getSemesterAktif_(){ return String(getConfigObject_().Semester||APP.CONFIG_DEFAULTS.Semester); }
 function escapeHtmlServer_(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
-/** Canonical NISN: selalu mengikuti NISN pada DATA_SISWA. */
+/** Canonical NISN: selalu mengikuti NISN pada DATA_SISWA, dengan cache. */
 function canonicalNisn_(value){
   const raw=String(value==null?'':value).trim().replace(/\.0$/,'');
   if(!raw)return '';
-  const siswa=typeof getSiswa_==='function'?getSiswa_():[];
-  const exact=siswa.find(x=>String(x.nisn||'').trim()===raw);
-  if(exact)return String(exact.nisn).trim();
+  const key=typeof cacheKey_==='function'?cacheKey_('MASTER_NISN',[]):'MASTER_NISN';
+  let map=typeof cacheGetJson_==='function'?cacheGetJson_(key):null;
+  if(!map){
+    map={exact:{},signature:{}};
+    const siswa=typeof getSiswa_==='function'?getSiswa_():[];
+    siswa.forEach(function(x){
+      const n=String(x.nisn||'').trim(); if(!n)return;
+      map.exact[n]=n;
+      if(/^\d{10}$/.test(n)){const sig=n.replace(/^0+/,'')||'0';if(!map.signature[sig])map.signature[sig]=[];map.signature[sig].push(n);}
+    });
+    if(typeof cachePutJson_==='function')cachePutJson_(key,map,300);
+  }
+  if(map.exact[raw])return map.exact[raw];
   if(/^\d+$/.test(raw)){
+    const sig=raw.replace(/^0+/,'')||'0',hits=map.signature[sig]||[];
+    if(hits.length===1)return hits[0];
     const padded=raw.padStart(10,'0');
-    const hit=siswa.find(x=>String(x.nisn||'').trim()===padded);
-    if(hit)return String(hit.nisn).trim();
-    const numeric=String(Number(raw));
-    const hit2=siswa.find(x=>String(Number(String(x.nisn||'').trim()))===numeric);
-    if(hit2)return String(hit2.nisn).trim();
+    if(map.exact[padded])return padded;
   }
   return raw;
 }
-
 function canonicalNisnForStudent_(value){
   const n=canonicalNisn_(value);
   if(/^\d{10}$/.test(n))return n;
