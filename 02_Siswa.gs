@@ -38,13 +38,13 @@ function saveSiswa_(obj){
   set('kelas',obj.kelas||cfg.Kelas||'');set('jurusan',obj.jurusan||cfg.Jurusan||'');
   set('tempat_lahir',obj.tempatLahir||'');set('tanggal_lahir',obj.tanggalLahir||'');set('nama_orang_tua',obj.orangTua||'');set('nomor_hp_orang_tua',obj.hp||'');set('alamat',obj.alamat||'');set('status',obj.status||'Aktif');set('tahun_pelajaran',obj.tahun||getTahunPelajaran_());
   if(idx>0)sh.getRange(idx+1,1,1,lastCol).setValues([row]);else sh.getRange(sh.getLastRow()+1,1,1,lastCol).setValues([row]);
-  commitDatabaseMutation_();logActivity_('SIMPAN SISWA',nisn+' - '+obj.nama);return{success:true,message:idx>0?'Data siswa diperbarui.':'Data siswa ditambahkan.'};
+  clearAppCache_();PropertiesService.getScriptProperties().setProperty('DB_VERSION',String(Date.now()));logActivity_('SIMPAN SISWA',nisn+' - '+obj.nama);return{success:true,message:idx>0?'Data siswa diperbarui.':'Data siswa ditambahkan.'};
 }
 function setSiswaStatus_(nisn,status){
   const sh=getSheet_(APP.SHEETS.SISWA),lastRow=sh.getLastRow(),lastCol=sh.getLastColumn();if(lastRow<2)throw new Error('Data siswa kosong.');
   const data=sh.getRange(1,1,lastRow,lastCol).getDisplayValues(),h=data[0].map(x=>String(x||'').trim().toLowerCase()),ni=h.indexOf('nisn'),si=h.indexOf('status');
   const idx=data.findIndex((r,i)=>i>0&&String(r[ni>=0?ni:1]||'').trim()===String(nisn).trim());if(idx<1)throw new Error('Siswa tidak ditemukan.');if(si<0)throw new Error('Kolom Status tidak ditemukan.');
-  sh.getRange(idx+1,si+1).setValue(status);commitDatabaseMutation_();logActivity_(status==='Aktif'?'AKTIFKAN SISWA':'NONAKTIFKAN SISWA',String(nisn));return{success:true,status};
+  sh.getRange(idx+1,si+1).setValue(status);clearAppCache_();PropertiesService.getScriptProperties().setProperty('DB_VERSION',String(Date.now()));logActivity_(status==='Aktif'?'AKTIFKAN SISWA':'NONAKTIFKAN SISWA',String(nisn));return{success:true,status};
 }
 function deleteSiswa_(nisn){return setSiswaStatus_(nisn,'Nonaktif');}
 function restoreSiswa_(nisn){return setSiswaStatus_(nisn,'Aktif');}
@@ -88,7 +88,7 @@ function importSiswaRows_(rows){
     // Hapus sisa baris lama secara fisik agar tidak ada data siswa lama yang masih terbaca.
     const totalRows=sh.getMaxRows(),needed=values.length+1;
     if(totalRows>needed)sh.deleteRows(needed+1,totalRows-needed);
-    commitDatabaseMutation_();
+    clearAppCache_();PropertiesService.getScriptProperties().setProperty('DB_VERSION',String(Date.now()));
     logActivity_('IMPORT SISWA - REPLACE',normalized.length+' siswa aktif pada master terbaru. Data master lama digantikan; histori absensi/pelanggaran/penghargaan dipertahankan.');
     return{success:true,berhasil:normalized.length,dilewati:0,baru:normalized.length,diperbarui:0,diganti:oldRows>1?oldRows-1:0,mode:'REPLACE_ALL',template:TEMPLATE,message:'Data siswa lama pada DATA_SISWA telah diganti seluruhnya dengan data dari template. Histori absensi dan catatan lain tidak dihapus.'};
   }finally{lock.releaseLock();}

@@ -10,10 +10,9 @@ function saveCatatanGeneric_(sheetName,obj){
   const c=getConfigObject_();
   getSheet_(sheetName).appendRow([generateID_('CAT'),parseDateInput_(obj.tanggal)||new Date(),s.nisn,s.nama,obj.catatan||'',obj.tindakLanjut||'',
     Session.getActiveUser().getEmail()||'WebApp',c.Tahun_Pelajaran||getTahunPelajaran_(),c.Semester||getSemesterAktif_()]);
-  commitDatabaseMutation_();
-  return {success:true,nisn:s.nisn,nama:s.nama};
+  return {success:true};
 }
 function getCatatan_(sheetName,nisn){
-  return getSheet_(sheetName).getDataRange().getValues().slice(1).filter(r=>canonicalNisn_(r[2])===canonicalNisn_(nisn))
-    .map(r=>({id:r[0],tanggal:formatTanggal_(r[1]),nisn:canonicalNisn_(r[2]),nama:r[3],catatan:r[4],tindakLanjut:r[5]}));
+  return getSheet_(sheetName).getDataRange().getValues().slice(1).filter(r=>String(r[2])===String(nisn))
+    .map(r=>({id:r[0],tanggal:formatTanggal_(r[1]),nisn:r[2],nama:r[3],catatan:r[4],tindakLanjut:r[5]}));
 }

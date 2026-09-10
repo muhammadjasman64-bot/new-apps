@@ -6,23 +6,24 @@
  * Menggunakan displayValues agar leading zero dari DATA_SISWA dipertahankan.
  */
 function absensiMasterNisnMap_(){
-  const sh=getSheet_(APP.SHEETS.SISWA), lr=sh.getLastRow(), lc=sh.getLastColumn();
+  // Reuse the centralized cached master map. Never scan DATA_SISWA per student.
+  const map=getMasterNisnMap_();
   const out={};
-  if(lr<2||lc<1)return out;
-  const h=sh.getRange(1,1,1,lc).getDisplayValues()[0].map(dbNormalizeHeader_);
-  const map=Object.fromEntries(h.map((x,i)=>[x,i]));
-  const c=dbFindColumn_(map,['NISN','NIS','Nomor Induk Siswa Nasional']);
-  if(c<0)return out;
-  const rows=sh.getRange(2,1,lr-1,lc).getDisplayValues();
-  rows.forEach(r=>{
-    const exact=String(r[c]??'').trim(); if(!exact)return;
-    const variants=[exact, exact.replace(/\.0$/,'')];
-    if(/^\d+$/.test(exact))variants.push(exact.padStart(10,'0'));
-    variants.forEach(v=>{ if(v)out[v]=exact; });
+  Object.keys(map.exact||{}).forEach(k=>out[k]=map.exact[k]);
+  Object.keys(map.signature||{}).forEach(sig=>{
+    const hits=map.signature[sig]||[];
+    if(hits.length===1){
+      const n=hits[0];
+      out[sig]=n;
+      if(/^\d+$/.test(sig))out[sig.padStart(10,'0')]=n;
+    }
   });
   return out;
 }
-function absensiCanonicalNisn_(value){ return canonicalNisn_(value); }
+function absensiCanonicalNisn_(value){
+  return canonicalNisn_(value);
+}
+
 function absensiSyncAllNisnToMaster_(){
   const master=absensiMasterNisnMap_();
   const names=[APP.SHEETS.ABSENSI,APP.SHEETS.PELANGGARAN,APP.SHEETS.PENGHARGAAN,APP.SHEETS.TINDAKAN,APP.SHEETS.PEMANGGILAN_ORANG_TUA,APP.SHEETS.CATATAN_WALI_KELAS,APP.SHEETS.CATATAN_BK,APP.SHEETS.REKAP_HARIAN,APP.SHEETS.REKAP_BULANAN,APP.SHEETS.REKAP_SEMESTER,APP.SHEETS.REKAP_TAHUNAN,APP.SHEETS.PERINGATAN_DINI];
@@ -74,7 +75,7 @@ function saveAbsensi_(records){
   });
   updates.forEach(u=>sh.getRange(u.row,1,1,lastCol).setValues([u.values]));
   if(adds.length)sh.getRange(sh.getLastRow()+1,1,adds.length,lastCol).setValues(adds);
-  commitDatabaseMutation_();logActivity_('INPUT ABSENSI',inserted+' baru, '+updated+' diperbarui');
+  clearAppCache_();PropertiesService.getScriptProperties().setProperty('DB_VERSION',String(Date.now()));logActivity_('INPUT ABSENSI',inserted+' baru, '+updated+' diperbarui');
   return{success:true,count:inserted+updated,inserted:inserted,updated:updated,date:formatDateKey_(parseDateInput_(records[0].tanggal)||now)};
 }
 
@@ -131,5 +132,5 @@ function getAbsensiSummary_(filters){
 function deleteAbsensi_(tanggal,nisn){
   const sh=getSheet_(APP.SHEETS.ABSENSI),lr=sh.getLastRow(),lc=sh.getLastColumn();if(lr<2)throw new Error('Data absensi kosong.');
   const all=sh.getRange(1,1,lr,lc).getValues(),h=all[0].map(dbNormalizeHeader_),map=Object.fromEntries(h.map((x,i)=>[x,i])),ct=dbFindColumn_(map,['Tanggal','Tanggal_Absensi','Tanggal Absensi','Tgl']),cn=dbFindColumn_(map,['NISN','NIS']);if(ct<0||cn<0)throw new Error('Header ABSENSI tidak lengkap.');
-  const key=formatDateKey_(parseDateInput_(tanggal)); const row=all.findIndex((r,i)=>i>0&&formatDateKey_(r[ct])===key&&canonicalNisn_(r[cn]).trim()===canonicalNisn_(nisn));if(row<1)throw new Error('Data absensi tidak ditemukan.');sh.deleteRow(row+1);commitDatabaseMutation_();logActivity_('HAPUS ABSENSI',String(nisn)+' - '+key);return{success:true};
+  const key=formatDateKey_(parseDateInput_(tanggal)); const row=all.findIndex((r,i)=>i>0&&formatDateKey_(r[ct])===key&&canonicalNisn_(r[cn]).trim()===canonicalNisn_(nisn));if(row<1)throw new Error('Data absensi tidak ditemukan.');sh.deleteRow(row+1);clearAppCache_();PropertiesService.getScriptProperties().setProperty('DB_VERSION',String(Date.now()));logActivity_('HAPUS ABSENSI',String(nisn)+' - '+key);return{success:true};
 }

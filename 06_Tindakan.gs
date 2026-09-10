@@ -48,7 +48,7 @@ function updateTindakanStatus_(id,status,keterangan){
   const i=d.rows.findIndex(r=>String(r[ci]||'').trim()===String(id).trim()); if(i<0)throw new Error('Tindakan tidak ditemukan.');
   const row=i+2,h=d.map,vals=sh.getRange(row,1,1,sh.getLastColumn()).getValues()[0];
   const cs=dbFindColumn_(h,['Status']),ck=dbFindColumn_(h,['Keterangan']); if(cs>=0)vals[cs]=status||'Selesai'; if(ck>=0)vals[ck]=keterangan||'';
-  sh.getRange(row,1,1,vals.length).setValues([vals]);commitDatabaseMutation_();logActivity_('UBAH STATUS TINDAKAN',String(id));return {success:true};
+  sh.getRange(row,1,1,vals.length).setValues([vals]);clearAppCache_();PropertiesService.getScriptProperties().setProperty('DB_VERSION',String(Date.now()));logActivity_('UBAH STATUS TINDAKAN',String(id));return {success:true};
 }
 function getPemanggilanHistory_(filters){
   filters=filters||{};const d=dbRead_(APP.SHEETS.PEMANGGILAN_ORANG_TUA),h=d.map;
@@ -59,7 +59,7 @@ function getPemanggilanHistory_(filters){
 }
 function updatePemanggilanStatus_(id,status,hasil,tindakLanjut){
   if(!id)throw new Error('ID pemanggilan wajib diisi.');const sh=getSheet_(APP.SHEETS.PEMANGGILAN_ORANG_TUA),d=dbRead_(APP.SHEETS.PEMANGGILAN_ORANG_TUA),ci=dbFindColumn_(d.map,['ID_Pemanggilan','ID']);const i=d.rows.findIndex(r=>String(r[ci]||'').trim()===String(id).trim());if(i<0)throw new Error('Pemanggilan tidak ditemukan.');
-  const row=i+2,h=d.map,vals=sh.getRange(row,1,1,sh.getLastColumn()).getValues()[0];const set=(names,v)=>{const c=dbFindColumn_(h,names);if(c>=0)vals[c]=v;};set(['Status'],status||'Selesai');set(['Hasil'],hasil||'');set(['Tindak_Lanjut'],tindakLanjut||'');sh.getRange(row,1,1,vals.length).setValues([vals]);commitDatabaseMutation_();logActivity_('UBAH STATUS PEMANGGILAN',String(id));return {success:true};
+  const row=i+2,h=d.map,vals=sh.getRange(row,1,1,sh.getLastColumn()).getValues()[0];const set=(names,v)=>{const c=dbFindColumn_(h,names);if(c>=0)vals[c]=v;};set(['Status'],status||'Selesai');set(['Hasil'],hasil||'');set(['Tindak_Lanjut'],tindakLanjut||'');sh.getRange(row,1,1,vals.length).setValues([vals]);clearAppCache_();PropertiesService.getScriptProperties().setProperty('DB_VERSION',String(Date.now()));logActivity_('UBAH STATUS PEMANGGILAN',String(id));return {success:true};
 }
 function renderSuratPemanggilanHtml_(nisn,ke){
   const s=findStudentByNisn_(nisn);if(!s)throw new Error('Siswa tidak ditemukan.');const cfg=getConfigObject_(),docs=getDocumentConfig_(),kop=fileImageDataUrl_(docs.kop),wali=fileImageDataUrl_(docs.wali),kep=fileImageDataUrl_(docs.kepsek);

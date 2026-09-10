@@ -37,7 +37,7 @@ function savePenghargaan_(obj) {
   const cfg=getConfigObject_();
   const sh=getSheet_(APP.SHEETS.PENGHARGAAN);
   sh.getRange(sh.getLastRow()+1,1,1,12).setValues([[generateID_('REW'),parseDateInput_(obj.tanggal)||new Date(),s.nisn,s.nama,obj.kelas||s.kelas,m.jenis,m.prestasi,Number(m.poin),obj.keterangan||'',Session.getActiveUser().getEmail()||'WebApp',cfg.Tahun_Pelajaran||getTahunPelajaran_(),cfg.Semester||getSemesterAktif_()]]);
-  commitDatabaseMutation_();
+  clearAppCache_();
   syncTindakanUntukSiswa_(s.nisn); logActivity_('INPUT PENGHARGAAN',s.nisn+' / '+m.kode);
   return {success:true,poin:m.poin};
 }
@@ -50,7 +50,7 @@ function getTotalPenghargaan_(nisn,start,end) {
   if(cNisn<0||cDate<0||cPoin<0) return 0;
   return d.rows.filter(r=>{
     const rv=String(r[cNisn]??'').trim(),dt=dbDate_(r[cDate]);
-    return rv===canonicalNisn_(nisn).trim() && dt && (!range.a||dt>=range.a) && (!range.b||dt<=range.b);
+    return rv===String(nisn).trim() && dt && (!range.a||dt>=range.a) && (!range.b||dt<=range.b);
   }).reduce((sum,r)=>sum+toNumberPoin_(r[cPoin]),0);
 }
 

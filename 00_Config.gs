@@ -46,36 +46,44 @@ function getTahunPelajaran_(){ return String(getConfigObject_().Tahun_Pelajaran|
 function getSemesterAktif_(){ return String(getConfigObject_().Semester||APP.CONFIG_DEFAULTS.Semester); }
 function escapeHtmlServer_(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
-/** Canonical NISN: selalu mengikuti NISN pada DATA_SISWA, dengan cache. */
+/** NISN MASTER RESOLVER: DATA_SISWA adalah satu-satunya sumber NISN.
+ * Dibuat terpusat + cached agar semua fitur memakai NISN yang sama tanpa membaca
+ * DATA_SISWA berulang-ulang pada setiap baris/transaksi.
+ */
+function getMasterNisnMap_(){
+  const key='MASTER_NISN_MAP_V1';
+  const cached=typeof cacheGetJson_==='function'?cacheGetJson_(key):null;
+  if(cached && cached.exact) return cached;
+  const exact={}, signature={};
+  const siswa=typeof getSiswa_==='function'?getSiswa_():[];
+  siswa.forEach(x=>{
+    const n=String(x.nisn==null?'':x.nisn).trim().replace(/\.0$/,'');
+    if(!n)return;
+    exact[n]=n;
+    if(/^\d{10}$/.test(n)){
+      const sig=n.replace(/^0+/,'')||'0';
+      if(!signature[sig])signature[sig]=[];
+      signature[sig].push(n);
+    }
+  });
+  const out={exact:exact,signature:signature};
+  return typeof cachePutJson_==='function'?cachePutJson_(key,out,300):out;
+}
 function canonicalNisn_(value){
   const raw=String(value==null?'':value).trim().replace(/\.0$/,'');
   if(!raw)return '';
-  const key=typeof cacheKey_==='function'?cacheKey_('MASTER_NISN',[]):'MASTER_NISN';
-  let map=typeof cacheGetJson_==='function'?cacheGetJson_(key):null;
-  if(!map){
-    map={exact:{},signature:{}};
-    const siswa=typeof getSiswa_==='function'?getSiswa_():[];
-    siswa.forEach(function(x){
-      const n=String(x.nisn||'').trim(); if(!n)return;
-      map.exact[n]=n;
-      if(/^\d{10}$/.test(n)){const sig=n.replace(/^0+/,'')||'0';if(!map.signature[sig])map.signature[sig]=[];map.signature[sig].push(n);}
-    });
-    if(typeof cachePutJson_==='function')cachePutJson_(key,map,300);
-  }
+  const map=getMasterNisnMap_();
   if(map.exact[raw])return map.exact[raw];
   if(/^\d+$/.test(raw)){
-    const sig=raw.replace(/^0+/,'')||'0',hits=map.signature[sig]||[];
+    const sig=raw.replace(/^0+/,'')||'0';
+    const hits=(map.signature&&map.signature[sig])||[];
     if(hits.length===1)return hits[0];
     const padded=raw.padStart(10,'0');
-    if(map.exact[padded])return padded;
+    if(map.exact[padded])return map.exact[padded];
   }
   return raw;
 }
-function canonicalNisnForStudent_(value){
-  const n=canonicalNisn_(value);
-  if(/^\d{10}$/.test(n))return n;
-  return n;
-}
+function canonicalNisnForStudent_(value){ return canonicalNisn_(value); }
 
 function repairConfig_(){
   const sh=getSheet_(APP.SHEETS.CONFIG);
