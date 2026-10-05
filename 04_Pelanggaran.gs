@@ -84,7 +84,7 @@ function getPelanggaranHistory_(filters){
   const d=dbRead_(APP.SHEETS.PELANGGARAN);
   const cn=dbFindColumn_(d.map,['NISN','NIS','Nomor Induk Siswa Nasional']), cd=dbFindColumn_(d.map,['Tanggal','Tanggal Pelanggaran','Tgl']), cns=dbFindColumn_(d.map,['Nama_Siswa','Nama Siswa','Nama']), ck=dbFindColumn_(d.map,['Kode_Pelanggaran','Kode','Kode Pelanggaran']), cj=dbFindColumn_(d.map,['Jenis_Pelanggaran','Jenis Pelanggaran','Jenis']), cp=dbFindColumn_(d.map,['Poin','Point']), ct=dbFindColumn_(d.map,['Tindakan']), ccat=dbFindColumn_(d.map,['Kategori']), cket=dbFindColumn_(d.map,['Keterangan','Catatan']), cid=dbFindColumn_(d.map,['ID_Pelanggaran','ID']), ckelas=dbFindColumn_(d.map,['Kelas']);
   if(cn<0||cd<0) return [];
-  const range=dateRangeInclusive_(filters.from,filters.to), nisn=String(filters.nisn||'').trim(), kelas=String(filters.kelas||'').trim();
+  const range=dateRangeInclusive_(filters.from,filters.to), nisn=normalizeNisnValue_(filters.nisn), kelas=String(filters.kelas||'').trim();
   const result=d.rows.map((r,i)=>({row:i+2,id:cid>=0?r[cid]:'',nisn:canonicalNisn_(r[cn]),nama:cns>=0?r[cns]:'',kelas:ckelas>=0?r[ckelas]:'',tanggal:formatTanggal_(r[cd]),tanggalKey:dbDate_(r[cd])?Utilities.formatDate(dbDate_(r[cd]),Session.getScriptTimeZone(),'yyyy-MM-dd'):'',kategori:ccat>=0?r[ccat]:'',kode:ck>=0?r[ck]:'',jenis:cj>=0?r[cj]:'',poin:cp>=0?toNumberPoin_(r[cp]):0,tindakan:ct>=0?r[ct]:'',keterangan:cket>=0?r[cket]:''}))
     .filter(x=>x.nisn.trim() && (!nisn||x.nisn.trim()===nisn) && (!kelas||String(x.kelas).trim()===kelas) && (!range.a||parseDateInput_(x.tanggalKey)>=range.a) && (!range.b||parseDateInput_(x.tanggalKey)<=range.b)).reverse();
   return cachePutJson_(cacheKey,result,CACHE_TTL.DERIVED);

@@ -9,6 +9,15 @@ function findRowByColumnFast_(sh,col,value,startRow){
   const hit=sh.getRange(start,col,last-start+1,1).createTextFinder(needle).matchEntireCell(true).matchCase(false).findNext();
   return hit?hit.getRow():-1;
 }
+/** Reliable NISN lookup: compares normalized display values, so text/number storage is equivalent. */
+function findRowByNisnFast_(sh,col,nisn,startRow){
+  col=Number(col); if(col<1)return -1;
+  const key=nisnText_(nisn); if(!/^\d{10}$/.test(key))return -1;
+  const start=Number(startRow||2),last=sh.getLastRow(); if(last<start)return -1;
+  const vals=sh.getRange(start,col,last-start+1,1).getDisplayValues();
+  for(let i=0;i<vals.length;i++) if(nisnText_(vals[i][0])===key) return start+i;
+  return -1;
+}
 function dbVersionTouchFast_(){
   try{if(typeof MASTER_PEMBINAAN_MEM_!=='undefined')MASTER_PEMBINAAN_MEM_=null;if(typeof DECISION_RULES_MEM_!=='undefined')DECISION_RULES_MEM_=null;}catch(e){}
   try{PropertiesService.getScriptProperties().setProperty('DB_VERSION',String(Date.now()));}catch(e){}
@@ -31,7 +40,7 @@ function saveSiswaFast_(obj){
   const nisn=nisnText_(obj.nisn); if(!/^\d{10}$/.test(nisn))throw new Error('NISN harus 10 digit angka.');
   const sh=getSheet_(APP.SHEETS.SISWA),lastCol=Math.max(sh.getLastColumn(),12),headers=sh.getRange(1,1,1,lastCol).getDisplayValues()[0].map(dbNormalizeHeader_);
   const col=k=>headers.indexOf(dbNormalizeHeader_(k)),ni=col('nisn')>=0?col('nisn'):1;
-  const rowNo=findRowByColumnFast_(sh,ni+1,nisn,2),wasUpdate=rowNo>0,cfg=getConfigObject_();
+  const rowNo=findRowByNisnFast_(sh,ni+1,nisn,2),wasUpdate=rowNo>0,cfg=getConfigObject_();
   const target=wasUpdate?sh.getRange(rowNo,1,1,lastCol).getValues()[0]:Array(lastCol).fill('');
   const set=(keys,val)=>{for(const k of (Array.isArray(keys)?keys:[keys])){const i=col(k);if(i>=0){target[i]=val;return;}}};
   if(!wasUpdate){const id=col('id_siswa')>=0?col('id_siswa'):col('id');if(id>=0)target[id]=generateID_('SIS');}

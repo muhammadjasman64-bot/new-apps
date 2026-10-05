@@ -69,7 +69,7 @@ function getTotalPenghargaan_(nisn,start,end) {
   if(cNisn<0||cDate<0||cPoin<0) return 0;
   return d.rows.filter(r=>{
     const rv=String(r[cNisn]??'').trim(),dt=dbDate_(r[cDate]);
-    return rv===String(nisn).trim() && dt && (!range.a||dt>=range.a) && (!range.b||dt<=range.b);
+    return rv===normalizeNisnValue_(nisn) && dt && (!range.a||dt>=range.a) && (!range.b||dt<=range.b);
   }).reduce((sum,r)=>sum+toNumberPoin_(r[cPoin]),0);
 }
 

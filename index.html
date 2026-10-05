@@ -77,7 +77,7 @@ function call(fn,...args){
     const runner=google.script.run.withSuccessHandler(r=>{
       setNetworkBusy(false);
       if(r&&r.success===false&&r.message)reject(new Error(r.message));
-      else{const data=r&&Object.prototype.hasOwnProperty.call(r,'data')?r.data:r;if(cacheable)API_CACHE.set(key,{ts:Date.now(),data:data});else if(!publicFns.includes(fn))clearApiCache();resolve(data);}
+      else{const data=r&&Object.prototype.hasOwnProperty.call(r,'data')?r.data:r;if(cacheable)API_CACHE.set(key,{ts:Date.now(),data:data});else if(!publicFns.includes(fn))invalidateMutationCache(fn);resolve(data);}
     }).withFailureHandler(e=>{setNetworkBusy(false);reject(new Error(e&&e.message?e.message:String(e)));});
     try{if(typeof runner.api!=='function')return reject(new Error('API Gateway tidak tersedia. Deployment masih menggunakan versi lama. Silakan deploy versi terbaru.'));
       if(publicFns.includes(fn))runner.api(fn,args);else runner.api(fn,args,window.AUTH_TOKEN||'');
@@ -85,6 +85,10 @@ function call(fn,...args){
   });
   if(cacheable){API_INFLIGHT.set(key,promise);promise.finally(()=>API_INFLIGHT.delete(key));}
   return promise;
+}
+function invalidateMutationCache(fn){
+  const related={saveSiswa:['getSiswaSemua','getSiswaAktif','getDashboard','getDashboardDetail'],importSiswaRows:['getSiswaSemua','getSiswaAktif','getDashboard','getDashboardDetail'],saveAbsensi:['getAbsensiTable','getAbsensiHistory','getAbsensiSummary','getAttendanceRiskSummary','getCombinedRiskSummary'],deleteAbsensi:['getAbsensiTable','getAbsensiHistory','getAbsensiSummary','getAttendanceRiskSummary','getCombinedRiskSummary'],savePelanggaran:['getPelanggaranHistory','getProfilPelanggaran','getStatusAlertSummary','getUnifiedRiskSummary','getDashboard'],updatePelanggaran:['getPelanggaranHistory','getProfilPelanggaran','getStatusAlertSummary','getUnifiedRiskSummary'],deletePelanggaran:['getPelanggaranHistory','getProfilPelanggaran','getStatusAlertSummary','getUnifiedRiskSummary'],savePenghargaan:['getStatusAlertSummary','getUnifiedRiskSummary','getDashboard']};
+  const names=related[fn]||[]; for(const key of API_CACHE.keys()){for(const n of names){if(key.startsWith(n+'|')){API_CACHE.delete(key);break;}}}
 }
 function invalidateDashboardCache(){['getDashboard','getDashboardDetail','getStatusAlertSummary','getAttendanceRiskSummary','getCombinedRiskSummary','getUnifiedRiskSummary','getEarlyWarningSummary'].forEach(fn=>{for(const k of API_CACHE.keys())if(k.startsWith(fn+'|'))API_CACHE.delete(k);});}
 function diagnoseApi(){return call('getSiswaAktif').then(()=>notify('API getSiswaAktif OK. Tidak ada pemanggilan runner.getSiswaAktif.',false)).catch(e=>notify('API check gagal: '+e.message,true))}

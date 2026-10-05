@@ -10,7 +10,7 @@ function getKeputusanPoin_(totalPoin) {
 }
 function getProfilPembinaan_(nisn) {
   const s=findStudentByNisn_(nisn); if(!s) throw new Error('Siswa tidak ditemukan.');
-  const tp=getTahunPelajaran_(),x=getPointSummaryMap_(null,null,tp)[String(nisn).trim()]||{pel:0,rew:0};
+  const tp=getTahunPelajaran_(),x=getPointSummaryMap_(null,null,tp)[normalizeNisnValue_(nisn)]||{pel:0,rew:0};
   const pel=toNumberPoin_(x.pel),rew=toNumberPoin_(x.rew),bersih=Math.max(0,pel-rew);
   // Tahapan pembinaan resmi dihitung dari POIN PELANGGARAN. Penghargaan tetap dicatat terpisah.
   return {siswa:s,poinPelanggaran:pel,poinPenghargaan:rew,poinBersih:bersih,poinPembinaan:pel,keputusan:getKeputusanPoin_(pel)};
@@ -39,7 +39,7 @@ function savePemanggilan_(obj) {
 function getTindakanHistory_(filters){
   filters=filters||{}; const d=dbRead_(APP.SHEETS.TINDAKAN);
   const h=d.map, cn=dbFindColumn_(h,['NISN','NIS']), cdt=dbFindColumn_(h,['Tanggal']), cnama=dbFindColumn_(h,['Nama_Siswa','Nama']), cp=dbFindColumn_(h,['Total_Poin','Poin']), cs=dbFindColumn_(h,['Status']), ct=dbFindColumn_(h,['Tindakan']), cd=dbFindColumn_(h,['Detail']), cpet=dbFindColumn_(h,['Petugas']), cket=dbFindColumn_(h,['Keterangan']), cid=dbFindColumn_(h,['ID_Tindakan','ID']);
-  const range=dateRangeInclusive_(filters.from,filters.to), nisn=String(filters.nisn||'').trim();
+  const range=dateRangeInclusive_(filters.from,filters.to), nisn=normalizeNisnValue_(filters.nisn);
   return d.rows.map((r,i)=>({row:i+2,id:cid>=0?r[cid]:'',tanggal:cdt>=0?formatTanggal_(r[cdt]):'',nisn:cn>=0?canonicalNisn_(r[cn]):'',nama:cnama>=0?r[cnama]:'',totalPoin:cp>=0?toNumberPoin_(r[cp]):0,status:cs>=0?r[cs]:'',tindakan:ct>=0?r[ct]:'',detail:cd>=0?r[cd]:'',petugas:cpet>=0?r[cpet]:'',keterangan:cket>=0?r[cket]:''}))
    .filter(x=>(!nisn||x.nisn.trim()===nisn)&&(!range.a||parseDateInput_(x.tanggal)>=range.a)&&(!range.b||parseDateInput_(x.tanggal)<=range.b)).reverse();
 }
@@ -54,7 +54,7 @@ function updateTindakanStatus_(id,status,keterangan){
 function getPemanggilanHistory_(filters){
   filters=filters||{};const d=dbRead_(APP.SHEETS.PEMANGGILAN_ORANG_TUA),h=d.map;
   const cn=dbFindColumn_(h,['NISN','NIS']),cd=dbFindColumn_(h,['Tanggal']),cna=dbFindColumn_(h,['Nama_Siswa','Nama']),cp=dbFindColumn_(h,['Poin','Total_Poin']),cke=dbFindColumn_(h,['Pemanggilan_Ke']),cpp=dbFindColumn_(h,['Pihak_Pemanggil']),ch=dbFindColumn_(h,['Hasil']),ctl=dbFindColumn_(h,['Tindak_Lanjut']),cs=dbFindColumn_(h,['Status']),cid=dbFindColumn_(h,['ID_Pemanggilan','ID']);
-  const range=dateRangeInclusive_(filters.from,filters.to),nisn=String(filters.nisn||'').trim();
+  const range=dateRangeInclusive_(filters.from,filters.to),nisn=normalizeNisnValue_(filters.nisn);
   return d.rows.map((r,i)=>({row:i+2,id:cid>=0?r[cid]:'',tanggal:cd>=0?formatTanggal_(r[cd]):'',nisn:cn>=0?canonicalNisn_(r[cn]):'',nama:cna>=0?r[cna]:'',poin:cp>=0?toNumberPoin_(r[cp]):0,ke:cke>=0?r[cke]:'',pihak:cpp>=0?r[cpp]:'',hasil:ch>=0?r[ch]:'',tindakLanjut:ctl>=0?r[ctl]:'',status:cs>=0?r[cs]:'Selesai'}))
    .filter(x=>(!nisn||x.nisn.trim()===nisn)&&(!range.a||parseDateInput_(x.tanggal)>=range.a)&&(!range.b||parseDateInput_(x.tanggal)<=range.b)).reverse();
 }

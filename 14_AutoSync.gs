@@ -15,16 +15,13 @@ function onEdit(e){
       enforceOfficialRules_();
       return;
     }
-    clearAppCache_();
-    if([APP.SHEETS.PELANGGARAN,APP.SHEETS.PENGHARGAAN].includes(name) && e.range.getRow()>1){
-      const nisnCol=3;
-      const nisn=String(e.range.getSheet().getRange(e.range.getRow(),nisnCol).getValue()||'').trim();
-      if(nisn) applyDecisionForStudent_(nisn);
-    }
-    if(name===APP.SHEETS.ABSENSI && e.range.getRow()>1){
-      clearAppCache_();
-    }
-    refreshDerivedRekap_();
+    // V50: jangan membangun ulang rekap pada setiap edit Spreadsheet.
+    // Rekap dibuat hanya saat diminta oleh menu/API. Ini menghindari operasi
+    // baca+tulis besar yang membuat input manual terasa lambat.
+    try{if(typeof invalidateStudentCaches_==='function' && name===APP.SHEETS.SISWA) invalidateStudentCaches_();}catch(ignore){}
+    try{if(name===APP.SHEETS.PELANGGARAN || name===APP.SHEETS.PENGHARGAAN){
+      if(typeof dbVersionTouchFast_==='function') dbVersionTouchFast_();
+    }}catch(ignore){}
   }catch(err){console.log('onEdit sync: '+err);}
 }
 function refreshDerivedRekap_(){

@@ -29,7 +29,7 @@ function saveSiswa_(obj){
   const headers=(lastCol?sh.getRange(1,1,1,lastCol).getDisplayValues()[0]:fallback).map(dbNormalizeHeader_);
   const col=k=>headers.indexOf(dbNormalizeHeader_(k));
   const ni=col('nisn')>=0?col('nisn'):1;
-  const rowNo=findRowByColumnFast_(sh,ni+1,nisn,2);
+  const rowNo=findRowByNisnFast_(sh,ni+1,nisn,2);
   const cfg=getConfigObject_();
   const target=rowNo>0?sh.getRange(rowNo,1,1,lastCol).getValues()[0]:Array(lastCol).fill('');
   const set=(keys,val)=>{const list=Array.isArray(keys)?keys:[keys];for(const k of list){const i=col(k);if(i>=0){target[i]=val;return true;}}return false;};
@@ -65,6 +65,7 @@ function importSiswaRows_(rows){
   try{
     const sh=getSheet_(APP.SHEETS.SISWA),lastCol=12;if(sh.getMaxColumns()<lastCol)sh.insertColumnsAfter(sh.getMaxColumns(),lastCol-sh.getMaxColumns());
     const values=normalized.map(x=>[generateID_('SIS'),x.NISN,x.Nama_Siswa,x.Kelas,x.Jurusan,x.Tempat_Lahir,x.Tanggal_Lahir,x.Nama_Orang_Tua,x.Nomor_HP_Orang_Tua,x.Alamat,x.Status,x.Tahun_Pelajaran]),oldCount=Math.max(sh.getLastRow()-1,0);
+    if(sh.getLastColumn()<lastCol) sh.insertColumnsAfter(sh.getLastColumn(), lastCol-sh.getLastColumn());
     sh.getRange(1,1,1,lastCol).setValues([DB_HEADERS]);if(oldCount)sh.getRange(2,1,oldCount,lastCol).clearContent();
     sh.getRange(2,2,values.length,1).setNumberFormat('@');sh.getRange(2,9,values.length,1).setNumberFormat('@');sh.getRange(2,1,values.length,lastCol).setValues(values);SpreadsheetApp.flush();
     if(sh.getRange(2,2).getDisplayValue().trim()!==normalized[0].NISN)throw new Error('Import gagal: DATA_SISWA tidak memuat NISN pertama setelah write.');
