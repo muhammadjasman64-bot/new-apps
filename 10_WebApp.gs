@@ -7,6 +7,7 @@ function api(name,args,token){
     if(fn==='login') return login_.apply(null,a);
     if(fn==='logout') return logout_.apply(null,a);
     if(fn==='getSession') return getSessionForClient_.apply(null,a);
+    if(fn==='databaseSmokeTest'){requireAuth_(token,['admin']);return databaseSmokeTest_();}
     if(fn==='listUsers') return listUsers_(token);
     if(fn==='saveUser') return saveUser_(token,a[0]);
     if(fn==='resetUserPassword') return resetUserPassword_(token,a[0],a[1]);

@@ -31,6 +31,8 @@ function setupDatabase_() {
     LOG_AKTIVITAS:['Timestamp','User','Aktivitas','Detail']
   };
   Object.keys(defs).forEach(k=>ensureSheetSchema_(ss,APP.SHEETS[k]||k,defs[k]));
+  // NISN selalu TEXT agar nol di depan tidak hilang. Dilakukan sekali saat setup, bukan setiap CRUD.
+  ['DATA_SISWA','ABSENSI','PELANGGARAN','PENGHARGAAN','TINDAKAN','PEMANGGILAN_ORANG_TUA','CATATAN_WALI_KELAS','CATATAN_BK','PERINGATAN_DINI'].forEach(n=>{const sh=ss.getSheetByName(n);if(sh&&sh.getLastColumn()){const h=sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0].map(dbNormalizeHeader_);const c=h.indexOf('nisn');if(c>=0&&sh.getMaxRows()>1)sh.getRange(2,c+1,sh.getMaxRows()-1,1).setNumberFormat('@');}});
   seedConfig_();
   seedMasterPelanggaranOfficial_();
   seedMasterPenghargaanOfficial_();

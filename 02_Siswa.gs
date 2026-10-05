@@ -38,7 +38,7 @@ function saveSiswa_(obj){
   set(['nama_siswa','nama'],String(obj.nama).trim());
   set(['kelas'],obj.kelas||cfg.Kelas||'');set(['jurusan'],obj.jurusan||cfg.Jurusan||'');
   set(['tempat_lahir'],obj.tempatLahir||'');set(['tanggal_lahir'],obj.tanggalLahir||'');set(['nama_orang_tua'],obj.orangTua||'');set(['nomor_hp_orang_tua'],obj.hp||'');set(['alamat'],obj.alamat||'');set(['status'],obj.status||'Aktif');set(['tahun_pelajaran'],obj.tahun||getTahunPelajaran_());
-  if(rowNo>0){sh.getRange(rowNo,ni+1).setNumberFormat('@');sh.getRange(rowNo,1,1,lastCol).setValues([target]);}else{const nr=sh.getLastRow()+1;sh.getRange(nr,ni+1).setNumberFormat('@');sh.getRange(nr,1,1,lastCol).setValues([target]);}
+  if(rowNo>0){sh.getRange(rowNo,1,1,lastCol).setValues([target]);}else{const nr=sh.getLastRow()+1;sh.getRange(nr,1,1,lastCol).setValues([target]);}
   // Invalidate only the student cache; do not flush every derived dashboard cache on a simple student CRUD.
   try{if(typeof cacheRemove_==='function')cacheRemove_('STUDENTS_CACHE');}catch(e){}
   try{PropertiesService.getScriptProperties().setProperty('DB_VERSION',String(Date.now()));}catch(e){}

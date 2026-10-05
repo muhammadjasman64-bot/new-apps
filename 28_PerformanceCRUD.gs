@@ -48,7 +48,7 @@ function saveSiswaFast_(obj){
   set('nisn',nisn);set(['nama_siswa','nama'],nama);set('kelas',obj.kelas||cfg.Kelas||'');set('jurusan',obj.jurusan||cfg.Jurusan||'');
   set('tempat_lahir',obj.tempatLahir||'');set('tanggal_lahir',obj.tanggalLahir||'');set('nama_orang_tua',obj.orangTua||'');set('nomor_hp_orang_tua',obj.hp||'');set('alamat',obj.alamat||'');set('status',obj.status||'Aktif');set('tahun_pelajaran',obj.tahun||getTahunPelajaran_());
   const writeRow=wasUpdate?rowNo:sh.getLastRow()+1;
-  sh.getRange(writeRow,ni+1).setNumberFormat('@');
+  // NISN ditulis sebagai string; format kolom ditetapkan saat setup, bukan setiap CRUD.
   sh.getRange(writeRow,1,1,lastCol).setValues([target]);
   SpreadsheetApp.flush();
   const verify=sh.getRange(writeRow,ni+1).getDisplayValue().trim();

@@ -52,3 +52,20 @@ function syncDatabase_(){
   return {ok:true,at:new Date().toISOString(),sheets:result};
 }
 function getDatabaseStatus_(){const c=CacheService.getScriptCache().get('DB_LAST_SYNC');return c?JSON.parse(c):syncDatabase_();}
+
+
+/** Memastikan Web App benar-benar terikat ke Spreadsheet dan dapat melakukan write+read.
+ * Tidak mengubah data bisnis; hanya menulis satu baris audit diagnostik.
+ */
+function databaseSmokeTest_(){
+  const ss=getSS_();
+  const sh=ss.getSheetByName(APP.SHEETS.LOG)||ss.insertSheet(APP.SHEETS.LOG);
+  const stamp=new Date(), marker='DBTEST-'+Utilities.getUuid().slice(0,8);
+  const row=Math.max(sh.getLastRow()+1,2);
+  if(sh.getLastRow()===0) sh.getRange(1,1,1,4).setValues([['Timestamp','User','Aktivitas','Detail']]);
+  sh.getRange(row,1,1,4).setValues([[stamp,Session.getActiveUser().getEmail()||'WebApp','DATABASE_SMOKE_TEST',marker]]);
+  SpreadsheetApp.flush();
+  const got=String(sh.getRange(row,4).getDisplayValue());
+  if(got!==marker) throw new Error('WRITE DATABASE GAGAL. Spreadsheet terbuka tetapi hasil write tidak dapat diverifikasi.');
+  return {ok:true,id:ss.getId(),name:ss.getName(),url:ss.getUrl(),sheet:sh.getName(),row:row,marker:marker,message:'WRITE + READ DATABASE BERHASIL.'};
+}

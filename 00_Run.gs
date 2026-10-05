@@ -111,3 +111,5 @@ function bindDatabaseToThisSpreadsheet(){
   return {success:true,id:ss.getId(),name:ss.getName(),url:ss.getUrl(),message:'Database Web App sekarang terikat ke Spreadsheet ini.'};
 }
 function getDatabaseBindingInfo(){return getDatabaseBindingInfo_();}
+
+function databaseSmokeTest(){return databaseSmokeTest_();}
