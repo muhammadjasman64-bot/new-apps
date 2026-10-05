@@ -64,7 +64,7 @@ function getMasterNisnMap_(){
   const exact={}, signature={};
   const siswa=typeof getSiswa_==='function'?getSiswa_():[];
   siswa.forEach(x=>{
-    const n=String(x.nisn==null?'':x.nisn).trim().replace(/\.0$/,'');
+    const n=normalizeNisnValue_(x.nisn);
     if(!n)return;
     exact[n]=n;
     if(/^\d{10}$/.test(n)){
@@ -77,7 +77,7 @@ function getMasterNisnMap_(){
   return typeof cachePutJson_==='function'?cachePutJson_(key,out,300):out;
 }
 function canonicalNisn_(value){
-  const raw=String(value==null?'':value).trim().replace(/\.0$/,'');
+  const raw=normalizeNisnValue_(value);
   if(!raw)return '';
   const map=getMasterNisnMap_();
   if(map.exact[raw])return map.exact[raw];
@@ -99,4 +99,10 @@ function repairConfig_(){
   const rows=Object.keys(APP.CONFIG_DEFAULTS).map(k=>[k, Object.prototype.hasOwnProperty.call(map,k)?map[k]:APP.CONFIG_DEFAULTS[k]]);
   sh.clearContents(); sh.getRange(1,1,1,2).setValues([['Parameter','Nilai']]); sh.getRange(2,1,rows.length,2).setValues(rows); sh.setFrozenRows(1); sh.autoResizeColumns(1,2);
   return 'CONFIG berhasil diperbaiki dan dilengkapi.';
+}
+
+// V49: normalisasi NISN terpusat untuk seluruh transaksi.
+function normalizeNisnValue_(value){
+  const s=String(value==null?'':value).trim().replace(/\.0$/,'');
+  return /^\d+$/.test(s)?s.padStart(10,'0'):s;
 }

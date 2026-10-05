@@ -3,7 +3,7 @@
  * Prinsip: header dinamis, batch read, cache hanya untuk data kecil/master.
  */
 function dbGetSheet_(name){
-  const ss=SpreadsheetApp.getActiveSpreadsheet();
+  const ss=getSS_();
   const sh=ss.getSheetByName(name);
   if(!sh) throw new Error('Sheet "'+name+'" tidak ditemukan.');
   return sh;
@@ -45,7 +45,7 @@ function dbDate_(v){
 function dbBetween_(v,start,end){const d=dbDate_(v);if(!d)return false;d.setHours(0,0,0,0);const a=new Date(start),b=new Date(end);a.setHours(0,0,0,0);b.setHours(23,59,59,999);return d>=a&&d<=b;}
 
 function syncDatabase_(){
-  const ss=SpreadsheetApp.getActiveSpreadsheet();
+  const ss=getSS_();
   const wanted=['CONFIG','DATA_SISWA','ABSENSI','MASTER_PELANGGARAN','PELANGGARAN','MASTER_PENGHARGAAN','PENGHARGAAN','TINDAKAN','DOKUMEN'];
   const result=wanted.map(name=>{const sh=ss.getSheetByName(name);if(!sh)return{sheet:name,status:'MISSING',rows:0,columns:0,headers:[]};const lastRow=Math.max(sh.getLastRow()-1,0),lastCol=sh.getLastColumn();return{sheet:name,status:'OK',rows:lastRow,columns:lastCol,headers:lastCol?sh.getRange(1,1,1,lastCol).getDisplayValues()[0]:[]};});
   CacheService.getScriptCache().put('DB_LAST_SYNC',JSON.stringify({at:new Date().toISOString(),sheets:result}),21600);

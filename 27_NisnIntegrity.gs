@@ -58,3 +58,4 @@ function validateNisnIntegrity_(){
   });
   return {ok:issues.length===0,issues:issues,total:issues.length};
 }
+function repairNisnDatabase(){return syncNisnDatabase_();}

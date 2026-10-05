@@ -18,7 +18,7 @@ function validateDatabase_(){
   };
   const out=[];
   Object.keys(required).forEach(name=>{
-    const sh=SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
+    const sh=getSS_().getSheetByName(name);
     if(!sh){out.push({sheet:name,ok:false,error:'Sheet tidak ditemukan'});return;}
     const map=dbGetHeaderMap_(sh);
     const missing=[];

@@ -30,47 +30,14 @@ function getScopedStudentRows_(token, includeInactive){
 }
 
 function importSiswaRowsScoped_(token, rows){
-  const s=requirePermission_(token,'write_students');
-  if(s.role==='admin') return importSiswaRows_(rows);
-  if(s.role!=='wali_kelas') throw new Error('Hanya Admin atau Wali Kelas yang dapat mengimpor data siswa.');
-  const kelas=String(s.kelas||'').trim();
-  if(!kelas) throw new Error('Akun Wali Kelas belum memiliki Kelas. Admin harus mengisi Kelas pada akun user.');
-  if(!Array.isArray(rows)||!rows.length) throw new Error('Tidak ada data untuk diimpor.');
-  const TEMPLATE=['NISN','Nama_Siswa','Kelas','Jurusan','Tempat_Lahir','Tanggal_Lahir','Nama_Orang_Tua','Nomor_HP_Orang_Tua','Alamat','Status','Tahun_Pelajaran'];
-  rows.forEach(function(r,i){
-    const rowClass=String(r&&r.Kelas||'').trim();
-    if(rowClass!==kelas) throw new Error('Baris '+(i+2)+': Kelas '+(rowClass||'(kosong)')+' tidak sesuai kelas Wali Kelas: '+kelas+'.');
-  });
-  // Validasi dan normalisasi dilakukan oleh engine resmi terlebih dahulu.
-  // Karena import global mengganti seluruh master, untuk Wali Kelas kita simpan snapshot
-  // kelasnya lalu gabungkan kembali dengan kelas lain. Histori seluruh siswa tetap utuh.
-  const oldAll=getSiswaSemua_();
-  const other=oldAll.filter(function(x){return String(x.kelas||'').trim()!==kelas;});
-  importSiswaRows_(rows);
-  try{
-    const now=getSiswaSemua_();
-    const importedClass=now.filter(function(x){return String(x.kelas||'').trim()===kelas;});
-    // importSiswaRows_ telah mengganti master global. Pulihkan kelas lain tanpa mengubah histori.
-    const merged=other.concat(importedClass);
-    const sh=getSheet_(APP.SHEETS.SISWA);
-    const lastCol=12;
-    const DB_HEADERS=['ID_Siswa'].concat(TEMPLATE);
-    const values=merged.map(function(x){return [x.id||generateID_('SIS'),x.nisn,x.nama,x.kelas,x.jurusan,x.tempatLahir,x.tanggalLahir,x.orangTua,x.hp,x.alamat,x.status||'Aktif',x.tahun||getTahunPelajaran_()];});
-    const lock=LockService.getScriptLock();lock.waitLock(10000);
-    try{
-      if(sh.getLastRow()>1) sh.getRange(2,1,sh.getLastRow()-1,lastCol).clearContent();
-      if(values.length){
-        sh.getRange(2,2,values.length,1).setNumberFormat('@');
-        sh.getRange(2,9,values.length,1).setNumberFormat('@');
-        sh.getRange(2,1,values.length,lastCol).setValues(values);
-      }
-      const needed=values.length+1,totalRows=sh.getMaxRows();
-      if(totalRows>needed) sh.deleteRows(needed+1,totalRows-needed);
-      clearAppCache_();PropertiesService.getScriptProperties().setProperty('DB_VERSION',String(Date.now()));
-      logActivity_('IMPORT SISWA WALI KELAS - REPLACE KELAS',kelas+'; '+importedClass.length+' siswa; kelas lain dipertahankan.');
-    }finally{lock.releaseLock();}
-    return {success:true,berhasil:importedClass.length,diganti:importedClass.length,kelas:kelas,mode:'REPLACE_CLASS',message:'Data siswa kelas '+kelas+' berhasil diganti dengan template terbaru. Data kelas lain dan seluruh histori tetap dipertahankan.'};
-  }catch(err){
-    throw new Error('Import kelas gagal diproses: '+err.message);
-  }
+  const s=requirePermission_(token,'write_students');if(s.role==='admin')return importSiswaRows_(rows);if(s.role!=='wali_kelas')throw new Error('Hanya Admin atau Wali Kelas yang dapat mengimpor data siswa.');
+  const kelas=String(s.kelas||'').trim();if(!kelas)throw new Error('Akun Wali Kelas belum memiliki Kelas.');if(!Array.isArray(rows)||!rows.length)throw new Error('Tidak ada data untuk diimpor.');
+  const TEMPLATE=['NISN','Nama_Siswa','Kelas','Jurusan','Tempat_Lahir','Tanggal_Lahir','Nama_Orang_Tua','Nomor_HP_Orang_Tua','Alamat','Status','Tahun_Pelajaran'],clean=v=>v==null?'':String(v).trim(),normalizeNisn=v=>clean(v).replace(/\.0$/,'').padStart(10,'0');
+  const imported=[],seen={};rows.forEach(function(r,i){if(String(r&&r.Kelas||'').trim()!==kelas)throw new Error('Baris '+(i+2)+': Kelas harus '+kelas+'.');const x={};TEMPLATE.forEach(k=>x[k]=r&&Object.prototype.hasOwnProperty.call(r,k)?r[k]:'');const nisn=normalizeNisn(x.NISN);if(!/^\d{10}$/.test(nisn))throw new Error('Baris '+(i+2)+': NISN harus tepat 10 digit.');if(!clean(x.Nama_Siswa))throw new Error('Baris '+(i+2)+': Nama_Siswa wajib diisi.');if(seen[nisn])throw new Error('Duplikat NISN dalam file: '+nisn);seen[nisn]=true;imported.push([generateID_('SIS'),nisn,clean(x.Nama_Siswa),kelas,clean(x.Jurusan),clean(x.Tempat_Lahir),clean(x.Tanggal_Lahir),clean(x.Nama_Orang_Tua),clean(x.Nomor_HP_Orang_Tua),clean(x.Alamat),clean(x.Status)||'Aktif',clean(x.Tahun_Pelajaran)||getTahunPelajaran_()]);});
+  const lock=LockService.getScriptLock();lock.waitLock(15000);try{
+    const sh=getSheet_(APP.SHEETS.SISWA),lastCol=12,lastRow=sh.getLastRow(),old=lastRow>=2?sh.getRange(2,1,lastRow-1,lastCol).getValues():[],keep=old.filter(r=>String(r[3]||'').trim()!==kelas),merged=keep.concat(imported);
+    if(old.length)sh.getRange(2,1,old.length,lastCol).clearContent();if(merged.length){sh.getRange(2,2,merged.length,1).setNumberFormat('@');sh.getRange(2,9,merged.length,1).setNumberFormat('@');sh.getRange(2,1,merged.length,lastCol).setValues(merged);}SpreadsheetApp.flush();
+    if(merged.length&&!sh.getRange(2,2).getDisplayValue().trim())throw new Error('Import kelas gagal diverifikasi di DATA_SISWA.');
+    invalidateStudentCaches_();appendActivityFast_('IMPORT SISWA WALI KELAS',kelas+'; '+imported.length+' siswa tersimpan.');return{success:true,berhasil:imported.length,diganti:imported.length,kelas,mode:'REPLACE_CLASS',message:'Data kelas '+kelas+' berhasil tersimpan. Kelas lain dan histori tetap dipertahankan.'};
+  }finally{lock.releaseLock();}
 }

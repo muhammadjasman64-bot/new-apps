@@ -60,7 +60,7 @@ function saveAbsensi_(records){
   const map=Object.fromEntries(headers.map((x,i)=>[x,i]));
   const cId=dbFindColumn_(map,['ID','ID_Absensi']),cT=dbFindColumn_(map,['Tanggal','Tanggal_Absensi','Tanggal Absensi','Tgl']),cN=dbFindColumn_(map,['NISN','NIS','Nomor Induk Siswa Nasional']),cNm=dbFindColumn_(map,['Nama_Siswa','Nama Siswa','Nama']),cK=dbFindColumn_(map,['Kelas','Rombel','Kelas/Rombel']),cS=dbFindColumn_(map,['Status','Status Kehadiran','Kehadiran']),cKet=dbFindColumn_(map,['Keterangan','Catatan']),cU=dbFindColumn_(map,['User','Penginput','Dibuat_Oleh']),cY=dbFindColumn_(map,['Tahun_Pelajaran','Tahun Pelajaran']),cSem=dbFindColumn_(map,['Semester']);
   if(cT<0||cN<0||cS<0)throw new Error('ABSENSI: header wajib tidak ditemukan. Diperlukan Tanggal, NISN, dan Status.');
-  const all=lastRow>=2?sh.getRange(2,1,lastRow-1,lastCol).getValues():[];
+  const all=lastRow>=2?sh.getRange(2,1,lastRow-1,lastCol).getValues():[]; if(cN>=0&&lastRow>=2) sh.getRange(2,cN+1,lastRow-1,1).setNumberFormat('@');
   const rowByKey={}; all.forEach((r,i)=>{const n=absensiCanonicalNisn_(cN>=0?r[cN]:''),d=cT>=0?formatDateKey_(r[cT]):'';if(n&&d)rowByKey[n+'|'+d]=i+2;});
   const updates=[],adds=[]; let updated=0,inserted=0;
   records.forEach(x=>{

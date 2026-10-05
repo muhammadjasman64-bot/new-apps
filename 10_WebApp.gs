@@ -26,6 +26,7 @@ function api(name,args,token){
       case'getMasterPembinaan':requirePermission_(token,'read_coaching');return getMasterPembinaan_.apply(null,args);
       case'getAturanInfo':requirePermission_(token,'read_rules');return getAturanInfoV37_.apply(null,args);
       case'validateOfficialRules':requireAuth_(token,['admin']);return validateOfficialRules_();
+      case'repairNisnDatabase':requireAuth_(token,['admin']);return repairNisnDatabase();
       case'getDashboard':requirePermission_(token,'read_dashboard');return getDashboard_.apply(null,args);
       case'getDashboardDetail':requirePermission_(token,'read_dashboard');return getDashboardDetail_.apply(null,args);
       case'saveSiswa':requireAuth_(token,['admin']);return (typeof saveSiswaFast_==='function'?saveSiswaFast_:saveSiswa_).apply(null,args);
