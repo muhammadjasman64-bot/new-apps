@@ -23,11 +23,18 @@ const APP = Object.freeze({
 });
 
 function getSS_(){
+  // Web App wajib menggunakan database Spreadsheet yang sudah dikunci saat setup.
+  // getActiveSpreadsheet() tidak dijadikan sumber utama karena konteks eksekusi
+  // Web App dapat berbeda dari Spreadsheet editor.
+  const props=PropertiesService.getScriptProperties();
+  const id=String(props.getProperty('SPREADSHEET_ID')||'').trim();
+  if(id){
+    try{return SpreadsheetApp.openById(id);}
+    catch(e){throw new Error('Spreadsheet database tidak dapat dibuka. SPREADSHEET_ID tersimpan tidak valid atau akses berubah. Jalankan setupDatabase() dari Spreadsheet database.');}
+  }
   const active=SpreadsheetApp.getActiveSpreadsheet();
   if(active) return active;
-  const id=PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
-  if(id){ try{return SpreadsheetApp.openById(id);}catch(e){} }
-  return null;
+  throw new Error('Spreadsheet database belum dikonfigurasi. Jalankan setupDatabase() satu kali dari Spreadsheet database.');
 }
 function getSheet_(name){ const sh=getSS_().getSheetByName(name); if(!sh) throw new Error('Sheet '+name+' belum ada. Jalankan setupDatabase_ terlebih dahulu.'); return sh; }
 function generateID_(prefix){ return prefix+'-'+Utilities.getUuid().split('-')[0].toUpperCase(); }

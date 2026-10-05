@@ -90,6 +90,11 @@ function importSiswaRows_(rows){
       sh.getRange(2,9,values.length,1).setNumberFormat('@');
       sh.getRange(2,1,values.length,lastCol).setValues(values);
     }
+    SpreadsheetApp.flush();
+    if(values.length){
+      const check=sh.getRange(2,2,1,2).getDisplayValues()[0];
+      if(String(check[0]||'').trim()!==String(values[0][1]||'').trim()) throw new Error('Import gagal diverifikasi: data pertama tidak tersimpan pada DATA_SISWA.');
+    }
     // Hapus sisa baris lama secara fisik agar tidak ada data siswa lama yang masih terbaca.
     const totalRows=sh.getMaxRows(),needed=values.length+1;
     if(totalRows>needed)sh.deleteRows(needed+1,totalRows-needed);

@@ -74,8 +74,15 @@ function saveAbsensi_(records){
     if(existingRow){updates.push({row:existingRow,values:row});updated++;}else{adds.push(row);inserted++;}
   });
   updates.forEach(u=>sh.getRange(u.row,1,1,lastCol).setValues([u.values]));
-  if(adds.length)sh.getRange(sh.getLastRow()+1,1,adds.length,lastCol).setValues(adds);
-  clearAppCache_();PropertiesService.getScriptProperties().setProperty('DB_VERSION',String(Date.now()));logActivity_('INPUT ABSENSI',inserted+' baru, '+updated+' diperbarui');
+  const firstAddRow=sh.getLastRow()+1;
+  if(adds.length)sh.getRange(firstAddRow,1,adds.length,lastCol).setValues(adds);
+  SpreadsheetApp.flush();
+  const checkRow=updates.length?updates[0].row:(adds.length?firstAddRow:-1);
+  if(checkRow>1){
+    const chk=sh.getRange(checkRow,1,1,lastCol).getDisplayValues()[0];
+    if(!String(chk[cN]||'').trim()) throw new Error('Data absensi gagal diverifikasi setelah penyimpanan.');
+  }
+  dbVersionTouchFast_();logActivity_('INPUT ABSENSI',inserted+' baru, '+updated+' diperbarui');
   return{success:true,count:inserted+updated,inserted:inserted,updated:updated,date:formatDateKey_(parseDateInput_(records[0].tanggal)||now)};
 }
 

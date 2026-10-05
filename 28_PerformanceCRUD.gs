@@ -45,7 +45,15 @@ function saveSiswaFast_(obj) {
   const nama=String(obj.nama).trim();
   set('nisn',nisn);set(['nama_siswa','nama'],nama);set('kelas',obj.kelas||cfg.Kelas||'');set('jurusan',obj.jurusan||cfg.Jurusan||'');
   set('tempat_lahir',obj.tempatLahir||'');set('tanggal_lahir',obj.tanggalLahir||'');set('nama_orang_tua',obj.orangTua||'');set('nomor_hp_orang_tua',obj.hp||'');set('alamat',obj.alamat||'');set('status',obj.status||'Aktif');set('tahun_pelajaran',obj.tahun||getTahunPelajaran_());
-  if(rowNo>0) sh.getRange(rowNo,1,1,lastCol).setValues([target]); else sh.getRange(sh.getLastRow()+1,1,1,lastCol).setValues([target]);
+  if(rowNo>0){
+    sh.getRange(rowNo,1,1,lastCol).setValues([target]);
+  }else{
+    rowNo=sh.getLastRow()+1;
+    sh.getRange(rowNo,1,1,lastCol).setValues([target]);
+  }
+  SpreadsheetApp.flush();
+  const verify=sh.getRange(rowNo,1,1,lastCol).getDisplayValues()[0];
+  if(String(verify[ni]||'').trim()!==nisn) throw new Error('Data siswa gagal diverifikasi setelah penyimpanan ke Spreadsheet.');
   dbVersionTouchFast_(); appendActivityFast_('SIMPAN SISWA',nisn+' - '+nama);
   return {success:true,updated:rowNo>0,message:rowNo>0?'Data siswa diperbarui.':'Data siswa ditambahkan.',student:{nisn,nama,kelas:obj.kelas||cfg.Kelas||'',jurusan:obj.jurusan||cfg.Jurusan||'',status:obj.status||'Aktif',tahun:obj.tahun||getTahunPelajaran_()}};
 }
@@ -64,7 +72,11 @@ function savePelanggaranFast_(obj) {
     master.kategori, master.kode, master.jenis, Number(master.poin), keputusan.tindakan,
     'Total poin setelah pelanggaran: ' + total + '. Status pembinaan: ' + keputusan.status + '. ' + keputusan.tindakan,
     Session.getActiveUser().getEmail() || 'WebApp', cfg.Tahun_Pelajaran || getTahunPelajaran_(), cfg.Semester || getSemesterAktif_()];
-  sh.getRange(sh.getLastRow() + 1, 1, 1, row.length).setValues([row]);
+  const pelRow=sh.getLastRow()+1;
+  sh.getRange(pelRow,1,1,row.length).setValues([row]);
+  SpreadsheetApp.flush();
+  const pelCheck=sh.getRange(pelRow,1,1,3).getDisplayValues()[0];
+  if(String(pelCheck[2]||'').trim()!==String(s.nisn).trim()) throw new Error('Pelanggaran gagal diverifikasi setelah penyimpanan.');
 
   // Tindakan otomatis ditulis langsung dari keputusan yang sudah tersedia.
   const tin = getSheet_(APP.SHEETS.TINDAKAN);
@@ -83,7 +95,11 @@ function savePenghargaanFast_(obj) {
   const s = findStudentByNisn_(obj.nisn); if (!s) throw new Error('Siswa tidak ditemukan.');
   const m = getMasterPenghargaan_().find(x => String(x.kode) === String(obj.kode)); if (!m) throw new Error('Kode penghargaan tidak ditemukan.');
   const cfg = getConfigObject_(), sh = getSheet_(APP.SHEETS.PENGHARGAAN), now = parseDateInput_(obj.tanggal) || new Date();
-  sh.getRange(sh.getLastRow() + 1, 1, 1, 12).setValues([[generateID_('REW'), now, s.nisn, s.nama, obj.kelas || s.kelas, m.jenis, m.prestasi, Number(m.poin), obj.keterangan || '', Session.getActiveUser().getEmail() || 'WebApp', cfg.Tahun_Pelajaran || getTahunPelajaran_(), cfg.Semester || getSemesterAktif_()]]);
+  const rewRow=sh.getLastRow()+1;
+  sh.getRange(rewRow,1,1,12).setValues([[generateID_('REW'), now, s.nisn, s.nama, obj.kelas || s.kelas, m.jenis, m.prestasi, Number(m.poin), obj.keterangan || '', Session.getActiveUser().getEmail() || 'WebApp', cfg.Tahun_Pelajaran || getTahunPelajaran_(), cfg.Semester || getSemesterAktif_()]]);
+  SpreadsheetApp.flush();
+  const rewCheck=sh.getRange(rewRow,1,1,4).getDisplayValues()[0];
+  if(String(rewCheck[2]||'').trim()!==String(s.nisn).trim()) throw new Error('Penghargaan gagal diverifikasi setelah penyimpanan.');
   dbVersionTouchFast_();
   appendActivityFast_('INPUT PENGHARGAAN', s.nisn + ' / ' + m.kode);
   return { success: true, poin: Number(m.poin), record: { nisn: s.nisn, nama: s.nama, kode: m.kode, prestasi: m.prestasi, poin: Number(m.poin) } };
