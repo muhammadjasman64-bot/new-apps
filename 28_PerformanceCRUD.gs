@@ -18,21 +18,10 @@ function findRowByColumnFast_(sh, col, value, startRow) {
 }
 
 function dbVersionTouchFast_() {
-  // Satu titik invalidasi; jangan melakukan read database setelah write.
-  try {
-    if (typeof MASTER_PEMBINAAN_MEM_ !== 'undefined') MASTER_PEMBINAAN_MEM_ = null;
-    if (typeof DECISION_RULES_MEM_ !== 'undefined') DECISION_RULES_MEM_ = null;
-  } catch (e) {}
-  try {
-    CacheService.getScriptCache().removeAll([
-      'APP_CONFIG_CACHE','MASTER_PEL_CACHE','MASTER_REWARD_CACHE','MASTER_PEMBINAAN_CACHE',
-      'STUDENTS_CACHE','DASHBOARD_CACHE','DASHBOARD_DETAIL_CACHE','STATUS_ALERT_SUMMARY_CACHE',
-      'ATTENDANCE_RISK_SUMMARY_CACHE','UNIFIED_RISK_SUMMARY_CACHE','EARLY_WARNING_SUMMARY_CACHE'
-    ]);
-  } catch (e) {}
-  PropertiesService.getScriptProperties().setProperty('DB_VERSION', String(Date.now()));
+  // Hanya bump versi. cacheKey_ memakai DB_VERSION sehingga cache lama otomatis tidak terbaca.
+  try { if (typeof MASTER_PEMBINAAN_MEM_ !== 'undefined') MASTER_PEMBINAAN_MEM_ = null; if (typeof DECISION_RULES_MEM_ !== 'undefined') DECISION_RULES_MEM_ = null; } catch(e) {}
+  try { PropertiesService.getScriptProperties().setProperty('DB_VERSION', String(Date.now())); } catch(e) {}
 }
-
 function appendActivityFast_(a, d) {
   // Logging tidak boleh menggagalkan CRUD utama.
   try {
@@ -44,39 +33,22 @@ function appendActivityFast_(a, d) {
 
 function saveSiswaFast_(obj) {
   if (!obj || !obj.nisn || !obj.nama) throw new Error('NISN dan Nama wajib diisi.');
-  const nisn = String(obj.nisn).trim();
-  if (!/^\d{10}$/.test(nisn)) throw new Error('NISN harus 10 digit angka.');
-  const sh = getSheet_(APP.SHEETS.SISWA);
-  const lastCol = Math.max(sh.getLastColumn(), 12);
-  const headers = sh.getRange(1, 1, 1, lastCol).getDisplayValues()[0].map(x => String(x || '').trim().toLowerCase());
-  const col = k => headers.indexOf(String(k).toLowerCase());
-  const ni = col('nisn') >= 0 ? col('nisn') + 1 : 2;
-  const rowNo = findRowByColumnFast_(sh, ni, nisn, 2);
-  const cfg = getConfigObject_();
-  const row = Array(lastCol).fill('');
-  const set = (key, val) => { const i = col(key); if (i >= 0) row[i] = val; };
-  const current = rowNo > 0 ? sh.getRange(rowNo, 1, 1, lastCol).getValues()[0] : row;
-  const target = rowNo > 0 ? current : row;
-  if (rowNo < 1) { const id = col('id_siswa') >= 0 ? col('id_siswa') : col('id'); if (id >= 0) target[id] = generateID_('SIS'); }
-  set.call(null, 'nisn', nisn);
-  const nama = String(obj.nama).trim();
-  set.call(null, 'nama_siswa', nama); if (col('nama_siswa') < 0) set.call(null, 'nama', nama);
-  set.call(null, 'kelas', obj.kelas || cfg.Kelas || '');
-  set.call(null, 'jurusan', obj.jurusan || cfg.Jurusan || '');
-  set.call(null, 'tempat_lahir', obj.tempatLahir || '');
-  set.call(null, 'tanggal_lahir', obj.tanggalLahir || '');
-  set.call(null, 'nama_orang_tua', obj.orangTua || '');
-  set.call(null, 'nomor_hp_orang_tua', obj.hp || '');
-  set.call(null, 'alamat', obj.alamat || '');
-  set.call(null, 'status', obj.status || 'Aktif');
-  set.call(null, 'tahun_pelajaran', obj.tahun || getTahunPelajaran_());
-  if (rowNo > 0) sh.getRange(rowNo, 1, 1, lastCol).setValues([target]);
-  else sh.getRange(sh.getLastRow() + 1, 1, 1, lastCol).setValues([target]);
-  dbVersionTouchFast_();
-  appendActivityFast_('SIMPAN SISWA', nisn + ' - ' + nama);
-  return { success: true, updated: rowNo > 0, message: rowNo > 0 ? 'Data siswa diperbarui.' : 'Data siswa ditambahkan.', student: { nisn: nisn, nama: nama, kelas: obj.kelas || cfg.Kelas || '', jurusan: obj.jurusan || cfg.Jurusan || '', status: obj.status || 'Aktif', tahun: obj.tahun || getTahunPelajaran_() } };
+  const nisn=String(obj.nisn).trim(); if(!/^\d{10}$/.test(nisn)) throw new Error('NISN harus 10 digit angka.');
+  const sh=getSheet_(APP.SHEETS.SISWA), lastCol=Math.max(sh.getLastColumn(),12), lastRow=sh.getLastRow();
+  const headers=(lastCol?sh.getRange(1,1,1,lastCol).getDisplayValues()[0]:[]).map(dbNormalizeHeader_);
+  const col=k=>headers.indexOf(dbNormalizeHeader_(k));
+  const ni=col('nisn')>=0?col('nisn'):1;
+  const rowNo=findRowByColumnFast_(sh,ni+1,nisn,2), cfg=getConfigObject_();
+  const target=rowNo>0?sh.getRange(rowNo,1,1,lastCol).getValues()[0]:Array(lastCol).fill('');
+  const set=(keys,val)=>{for(const k of (Array.isArray(keys)?keys:[keys])){const i=col(k);if(i>=0){target[i]=val;return;}}};
+  if(rowNo<1){const id=col('id_siswa')>=0?col('id_siswa'):col('id');if(id>=0)target[id]=generateID_('SIS');}
+  const nama=String(obj.nama).trim();
+  set('nisn',nisn);set(['nama_siswa','nama'],nama);set('kelas',obj.kelas||cfg.Kelas||'');set('jurusan',obj.jurusan||cfg.Jurusan||'');
+  set('tempat_lahir',obj.tempatLahir||'');set('tanggal_lahir',obj.tanggalLahir||'');set('nama_orang_tua',obj.orangTua||'');set('nomor_hp_orang_tua',obj.hp||'');set('alamat',obj.alamat||'');set('status',obj.status||'Aktif');set('tahun_pelajaran',obj.tahun||getTahunPelajaran_());
+  if(rowNo>0) sh.getRange(rowNo,1,1,lastCol).setValues([target]); else sh.getRange(sh.getLastRow()+1,1,1,lastCol).setValues([target]);
+  dbVersionTouchFast_(); appendActivityFast_('SIMPAN SISWA',nisn+' - '+nama);
+  return {success:true,updated:rowNo>0,message:rowNo>0?'Data siswa diperbarui.':'Data siswa ditambahkan.',student:{nisn,nama,kelas:obj.kelas||cfg.Kelas||'',jurusan:obj.jurusan||cfg.Jurusan||'',status:obj.status||'Aktif',tahun:obj.tahun||getTahunPelajaran_()}};
 }
-
 function savePelanggaranFast_(obj) {
   if (!obj || !obj.nisn || !obj.kode) throw new Error('Siswa dan pelanggaran wajib dipilih.');
   const s = findStudentByNisn_(obj.nisn); if (!s) throw new Error('Siswa tidak ditemukan.');

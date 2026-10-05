@@ -25,20 +25,25 @@ function saveSiswa_(obj){
   const nisn=String(obj.nisn).trim();
   if(!/^\d{10}$/.test(nisn))throw new Error('NISN harus 10 digit angka.');
   const sh=getSheet_(APP.SHEETS.SISWA),lastCol=Math.max(sh.getLastColumn(),12),lastRow=sh.getLastRow();
-  const data=lastRow>=2?sh.getRange(1,1,lastRow,lastCol).getDisplayValues():[['ID','NISN','Nama_Siswa','Kelas','Jurusan','Tempat_Lahir','Tanggal_Lahir','Nama_Orang_Tua','Nomor_HP_Orang_Tua','Alamat','Status','Tahun_Pelajaran']];
-  const h=data[0].map(x=>String(x||'').trim().toLowerCase());
-  const col=k=>h.indexOf(k.toLowerCase());
-  const ni=col('nisn'), idx=data.findIndex((r,i)=>i>0&&String(r[ni>=0?ni:1]||'').trim()===nisn);
+  const fallback=['ID_Siswa','NISN','Nama_Siswa','Kelas','Jurusan','Tempat_Lahir','Tanggal_Lahir','Nama_Orang_Tua','Nomor_HP_Orang_Tua','Alamat','Status','Tahun_Pelajaran'];
+  const headers=(lastCol?sh.getRange(1,1,1,lastCol).getDisplayValues()[0]:fallback).map(dbNormalizeHeader_);
+  const col=k=>headers.indexOf(dbNormalizeHeader_(k));
+  const ni=col('nisn')>=0?col('nisn'):1;
+  const rowNo=findRowByColumnFast_(sh,ni+1,nisn,2);
   const cfg=getConfigObject_();
-  const row=idx>0?data[idx].slice(0,lastCol):Array(lastCol).fill('');
-  const set=(key,val)=>{const i=col(key);if(i>=0)row[i]=val;};
-  if(idx<1){const id=col('id');if(id>=0)row[id]=generateID_('SIS');}
-  set('nisn',nisn);set('nama_siswa',String(obj.nama).trim());
-  if(col('nama_siswa')<0)set('nama',String(obj.nama).trim());
-  set('kelas',obj.kelas||cfg.Kelas||'');set('jurusan',obj.jurusan||cfg.Jurusan||'');
-  set('tempat_lahir',obj.tempatLahir||'');set('tanggal_lahir',obj.tanggalLahir||'');set('nama_orang_tua',obj.orangTua||'');set('nomor_hp_orang_tua',obj.hp||'');set('alamat',obj.alamat||'');set('status',obj.status||'Aktif');set('tahun_pelajaran',obj.tahun||getTahunPelajaran_());
-  if(idx>0)sh.getRange(idx+1,1,1,lastCol).setValues([row]);else sh.getRange(sh.getLastRow()+1,1,1,lastCol).setValues([row]);
-  clearAppCache_();PropertiesService.getScriptProperties().setProperty('DB_VERSION',String(Date.now()));logActivity_('SIMPAN SISWA',nisn+' - '+obj.nama);return{success:true,message:idx>0?'Data siswa diperbarui.':'Data siswa ditambahkan.'};
+  const target=rowNo>0?sh.getRange(rowNo,1,1,lastCol).getValues()[0]:Array(lastCol).fill('');
+  const set=(keys,val)=>{const list=Array.isArray(keys)?keys:[keys];for(const k of list){const i=col(k);if(i>=0){target[i]=val;return true;}}return false;};
+  if(rowNo<1){const id=col('id_siswa')>=0?col('id_siswa'):col('id');if(id>=0&&!target[id])target[id]=generateID_('SIS');}
+  set(['nisn'],nisn);
+  set(['nama_siswa','nama'],String(obj.nama).trim());
+  set(['kelas'],obj.kelas||cfg.Kelas||'');set(['jurusan'],obj.jurusan||cfg.Jurusan||'');
+  set(['tempat_lahir'],obj.tempatLahir||'');set(['tanggal_lahir'],obj.tanggalLahir||'');set(['nama_orang_tua'],obj.orangTua||'');set(['nomor_hp_orang_tua'],obj.hp||'');set(['alamat'],obj.alamat||'');set(['status'],obj.status||'Aktif');set(['tahun_pelajaran'],obj.tahun||getTahunPelajaran_());
+  if(rowNo>0)sh.getRange(rowNo,1,1,lastCol).setValues([target]);else sh.getRange(sh.getLastRow()+1,1,1,lastCol).setValues([target]);
+  // Invalidate only the student cache; do not flush every derived dashboard cache on a simple student CRUD.
+  try{if(typeof cacheRemove_==='function')cacheRemove_('STUDENTS_CACHE');}catch(e){}
+  try{PropertiesService.getScriptProperties().setProperty('DB_VERSION',String(Date.now()));}catch(e){}
+  appendActivityFast_('SIMPAN SISWA',nisn+' - '+obj.nama);
+  return{success:true,updated:rowNo>0,message:rowNo>0?'Data siswa diperbarui.':'Data siswa ditambahkan.',student:{nisn:nisn,nama:String(obj.nama).trim(),kelas:obj.kelas||cfg.Kelas||'',jurusan:obj.jurusan||cfg.Jurusan||'',status:obj.status||'Aktif',tahun:obj.tahun||getTahunPelajaran_()}};
 }
 function setSiswaStatus_(nisn,status){
   const sh=getSheet_(APP.SHEETS.SISWA),lastRow=sh.getLastRow(),lastCol=sh.getLastColumn();if(lastRow<2)throw new Error('Data siswa kosong.');

@@ -73,18 +73,9 @@ function saveAbsensi_(records){
     const row=existingRow?all[existingRow-2].slice():Array(lastCol).fill('');Object.keys(vals).forEach(k=>row[Number(k)]=vals[k]);
     if(existingRow){updates.push({row:existingRow,values:row});updated++;}else{adds.push(row);inserted++;}
   });
-  // Satu write untuk seluruh snapshot, bukan 1 write per siswa.
-  // Ini memang membaca seluruh ABSENSI sekali, tetapi hanya menulis sekali.
-  if(updates.length || adds.length){
-    const finalRows=all.slice();
-    updates.forEach(u=>{ finalRows[u.row-2]=u.values; });
-    if(adds.length) adds.forEach(r=>finalRows.push(r));
-    if(finalRows.length) sh.getRange(2,1,finalRows.length,lastCol).setValues(finalRows);
-  }
-  if(typeof dbVersionTouchFast_==='function') dbVersionTouchFast_();
-  else { clearAppCache_(); PropertiesService.getScriptProperties().setProperty('DB_VERSION',String(Date.now())); }
-  if(typeof appendActivityFast_==='function') appendActivityFast_('INPUT ABSENSI',inserted+' baru, '+updated+' diperbarui');
-  else logActivity_('INPUT ABSENSI',inserted+' baru, '+updated+' diperbarui');
+  updates.forEach(u=>sh.getRange(u.row,1,1,lastCol).setValues([u.values]));
+  if(adds.length)sh.getRange(sh.getLastRow()+1,1,adds.length,lastCol).setValues(adds);
+  clearAppCache_();PropertiesService.getScriptProperties().setProperty('DB_VERSION',String(Date.now()));logActivity_('INPUT ABSENSI',inserted+' baru, '+updated+' diperbarui');
   return{success:true,count:inserted+updated,inserted:inserted,updated:updated,date:formatDateKey_(parseDateInput_(records[0].tanggal)||now)};
 }
 
