@@ -52,38 +52,50 @@ function absensiSyncAllNisnToMaster_(){
 }
 
 function saveAbsensi_(records){
-  if(typeof ensureAttendanceMonthCycle_==='function')ensureAttendanceMonthCycle_();
   if(!Array.isArray(records)||!records.length)throw new Error('Data absensi kosong.');
+  if(typeof ensureAttendanceMonthCycle_==='function')ensureAttendanceMonthCycle_();
   const sh=getSheet_(APP.SHEETS.ABSENSI),cfg=getConfigObject_(),user=Session.getActiveUser().getEmail()||'WebApp',now=new Date();
   const lastRow=sh.getLastRow(),lastCol=sh.getLastColumn();
-  const headers=lastCol?sh.getRange(1,1,1,lastCol).getValues()[0].map(dbNormalizeHeader_):[];
+  const headers=sh.getRange(1,1,1,lastCol).getDisplayValues()[0].map(dbNormalizeHeader_);
   const map=Object.fromEntries(headers.map((x,i)=>[x,i]));
   const cId=dbFindColumn_(map,['ID','ID_Absensi']),cT=dbFindColumn_(map,['Tanggal','Tanggal_Absensi','Tanggal Absensi','Tgl']),cN=dbFindColumn_(map,['NISN','NIS','Nomor Induk Siswa Nasional']),cNm=dbFindColumn_(map,['Nama_Siswa','Nama Siswa','Nama']),cK=dbFindColumn_(map,['Kelas','Rombel','Kelas/Rombel']),cS=dbFindColumn_(map,['Status','Status Kehadiran','Kehadiran']),cKet=dbFindColumn_(map,['Keterangan','Catatan']),cU=dbFindColumn_(map,['User','Penginput','Dibuat_Oleh']),cY=dbFindColumn_(map,['Tahun_Pelajaran','Tahun Pelajaran']),cSem=dbFindColumn_(map,['Semester']);
   if(cT<0||cN<0||cS<0)throw new Error('ABSENSI: header wajib tidak ditemukan. Diperlukan Tanggal, NISN, dan Status.');
-  const all=lastRow>=2?sh.getRange(2,1,lastRow-1,lastCol).getValues():[]; if(cN>=0&&lastRow>=2) sh.getRange(2,cN+1,lastRow-1,1).setNumberFormat('@');
-  const rowByKey={}; all.forEach((r,i)=>{const n=absensiCanonicalNisn_(cN>=0?r[cN]:''),d=cT>=0?formatDateKey_(r[cT]):'';if(n&&d)rowByKey[n+'|'+d]=i+2;});
-  const updates=[],adds=[]; let updated=0,inserted=0;
-  records.forEach(x=>{
+  // Hanya baca dua kolom indeks untuk mencari record lama; jangan membaca seluruh sheet.
+  const existing={};
+  if(lastRow>=2){
+    const dates=sh.getRange(2,cT+1,lastRow-1,1).getValues(), nisns=sh.getRange(2,cN+1,lastRow-1,1).getDisplayValues();
+    for(let i=0;i<dates.length;i++){const n=absensiCanonicalNisn_(nisns[i][0]),d=formatDateKey_(dates[i][0]);if(n&&d)existing[n+'|'+d]=i+2;}
+  }
+  const updatesByRow={},adds=[]; let firstTargetRow=-1; let firstAddIndex=-1;
+  records.forEach((x,ri)=>{
     const s=findStudentByNisn_(absensiCanonicalNisn_(x.nisn));if(!s)throw new Error('NISN tidak ditemukan: '+x.nisn);
     const status=String(x.status||'H').toUpperCase();if(!['H','S','I','A','T','D'].includes(status))throw new Error('Status absensi tidak valid: '+status);
-    const dt=parseDateInput_(x.tanggal)||now, key=absensiCanonicalNisn_(s.nisn)+'|'+formatDateKey_(dt), existingRow=rowByKey[key];
-    const vals={};
-    if(cId>=0)vals[cId]=existingRow?sh.getRange(existingRow,cId+1).getValue():generateID_('ABS');
-    if(cT>=0)vals[cT]=dt;if(cN>=0)vals[cN]=absensiCanonicalNisn_(s.nisn);if(cNm>=0)vals[cNm]=s.nama;if(cK>=0)vals[cK]=x.kelas||s.kelas;if(cS>=0)vals[cS]=status;if(cKet>=0)vals[cKet]=x.keterangan||'';if(cU>=0)vals[cU]=user;if(cY>=0)vals[cY]=cfg.Tahun_Pelajaran||getTahunPelajaran_();if(cSem>=0)vals[cSem]=cfg.Semester||getSemesterAktif_();
-    const row=existingRow?all[existingRow-2].slice():Array(lastCol).fill('');Object.keys(vals).forEach(k=>row[Number(k)]=vals[k]);
-    if(existingRow){updates.push({row:existingRow,values:row});updated++;}else{adds.push(row);inserted++;}
+    const dt=parseDateInput_(x.tanggal)||now,key=absensiCanonicalNisn_(s.nisn)+'|'+formatDateKey_(dt),rowNo=existing[key];
+    let row;
+    if(rowNo){
+      if(!updatesByRow[rowNo])updatesByRow[rowNo]=sh.getRange(rowNo,1,1,lastCol).getValues()[0];
+      row=updatesByRow[rowNo];
+    }else row=Array(lastCol).fill('');
+    const set=(c,v)=>{if(c>=0)row[c]=v;};
+    if(!rowNo)set(cId,generateID_('ABS')); set(cT,dt);set(cN,absensiCanonicalNisn_(s.nisn));set(cNm,s.nama);set(cK,x.kelas||s.kelas);set(cS,status);set(cKet,x.keterangan||'');set(cU,user);set(cY,cfg.Tahun_Pelajaran||getTahunPelajaran_());set(cSem,cfg.Semester||getSemesterAktif_());
+    if(rowNo){if(firstTargetRow<0)firstTargetRow=rowNo;} else {if(firstAddIndex<0)firstAddIndex=adds.length;adds.push(row);}
   });
-  updates.forEach(u=>sh.getRange(u.row,1,1,lastCol).setValues([u.values]));
-  const firstAddRow=sh.getLastRow()+1;
-  if(adds.length)sh.getRange(firstAddRow,1,adds.length,lastCol).setValues(adds);
-  SpreadsheetApp.flush();
-  const checkRow=updates.length?updates[0].row:(adds.length?firstAddRow:-1);
-  if(checkRow>1){
-    const chk=sh.getRange(checkRow,1,1,lastCol).getDisplayValues()[0];
-    if(!String(chk[cN]||'').trim()) throw new Error('Data absensi gagal diverifikasi setelah penyimpanan.');
+  // Existing records are normally a contiguous daily block. Write the smallest possible block.
+  const rows=Object.keys(updatesByRow).map(Number).sort((a,b)=>a-b);
+  if(rows.length){
+    let start=rows[0],block=[updatesByRow[start]];
+    for(let i=1;i<rows.length;i++){if(rows[i]===rows[i-1]+1){block.push(updatesByRow[rows[i]]);}else{sh.getRange(start,1,block.length,lastCol).setValues(block);start=rows[i];block=[updatesByRow[start]];}}
+    sh.getRange(start,1,block.length,lastCol).setValues(block);
   }
-  dbVersionTouchFast_();logActivity_('INPUT ABSENSI',inserted+' baru, '+updated+' diperbarui');
-  return{success:true,count:inserted+updated,inserted:inserted,updated:updated,date:formatDateKey_(parseDateInput_(records[0].tanggal)||now)};
+  const firstAddRow=sh.getLastRow()+1;if(adds.length)sh.getRange(firstAddRow,1,adds.length,lastCol).setValues(adds);
+  // NISN only on affected rows, not the entire historical column.
+  if(rows.length)rows.forEach(r=>sh.getRange(r,cN+1).setNumberFormat('@'));
+  if(adds.length)sh.getRange(firstAddRow,cN+1,adds.length,1).setNumberFormat('@');
+  SpreadsheetApp.flush();
+  const verifyRow=firstTargetRow>1?firstTargetRow:(firstAddIndex>=0?firstAddRow+firstAddIndex:-1);
+  if(verifyRow>1&&nisnText_(sh.getRange(verifyRow,cN+1).getDisplayValue())!==nisnText_(records[0].nisn))throw new Error('Data absensi gagal diverifikasi setelah penyimpanan.');
+  dbVersionTouchFast_();appendActivityFast_('INPUT ABSENSI',adds.length+' baru, '+rows.length+' diperbarui');
+  return{success:true,count:adds.length+rows.length,inserted:adds.length,updated:rows.length,date:formatDateKey_(parseDateInput_(records[0].tanggal)||now)};
 }
 
 function getAbsensiByDate_(dateStr,kelas){

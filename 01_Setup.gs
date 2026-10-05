@@ -3,8 +3,10 @@
  * Tahun Pelajaran 2026/2027.
  */
 function setupDatabase_() {
-  const ss=getSS_();
-  if(!ss) throw new Error('Spreadsheet tidak ditemukan. Buka project Apps Script dari spreadsheet yang benar lalu jalankan setupDatabase sekali.');
+  // SETUP HARUS mengikat database ke Spreadsheet tempat script ini dijalankan.
+  // Jangan memakai SPREADSHEET_ID lama di tahap setup karena dapat menunjuk DB yang salah.
+  const ss=SpreadsheetApp.getActiveSpreadsheet();
+  if(!ss) throw new Error('Spreadsheet database tidak ditemukan. Buka project Apps Script dari Spreadsheet database lalu jalankan setupDatabase().');
   PropertiesService.getScriptProperties().setProperty('SPREADSHEET_ID',ss.getId());
   const defs={
     USERS:['ID_User','Username','Password_Hash','Nama_Lengkap','Role','NISN','Kelas','Status','Created_At','Updated_At'],

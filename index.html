@@ -92,6 +92,7 @@ function invalidateMutationCache(fn){
 }
 function invalidateDashboardCache(){['getDashboard','getDashboardDetail','getStatusAlertSummary','getAttendanceRiskSummary','getCombinedRiskSummary','getUnifiedRiskSummary','getEarlyWarningSummary'].forEach(fn=>{for(const k of API_CACHE.keys())if(k.startsWith(fn+'|'))API_CACHE.delete(k);});}
 function diagnoseApi(){return call('getSiswaAktif').then(()=>notify('API getSiswaAktif OK. Tidak ada pemanggilan runner.getSiswaAktif.',false)).catch(e=>notify('API check gagal: '+e.message,true))}
+async function diagnoseDatabaseBinding(){try{const d=await call('getDatabaseBindingInfo');notify('Database: '+d.name+' • '+d.id,false);console.log('Database binding',d);}catch(e){notify('Database binding gagal: '+e.message,true)}}
 function notify(t,err=false){
   const box=$('msg'); if(!box)return;
   const icon=err?'!':'✓';

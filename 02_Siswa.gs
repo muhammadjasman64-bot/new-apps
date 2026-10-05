@@ -53,23 +53,4 @@ function setSiswaStatus_(nisn,status){
 }
 function deleteSiswa_(nisn){return setSiswaStatus_(nisn,'Nonaktif');}
 function restoreSiswa_(nisn){return setSiswaStatus_(nisn,'Aktif');}
-function importSiswaRows_(rows){
-  if(!Array.isArray(rows)||!rows.length)throw new Error('Tidak ada data untuk diimpor.');
-  const TEMPLATE=['NISN','Nama_Siswa','Kelas','Jurusan','Tempat_Lahir','Tanggal_Lahir','Nama_Orang_Tua','Nomor_HP_Orang_Tua','Alamat','Status','Tahun_Pelajaran'];
-  const DB_HEADERS=['ID_Siswa'].concat(TEMPLATE),clean=v=>v==null?'':String(v).trim();
-  const normalizeNisn=v=>clean(v).replace(/\.0$/,'').padStart(10,'0');
-  const normalizeDate=v=>v instanceof Date&&!isNaN(v.getTime())?Utilities.formatDate(v,Session.getScriptTimeZone(),'yyyy-MM-dd'):clean(v);
-  const normalized=[],seen={};
-  rows.forEach((r,i)=>{const x={};TEMPLATE.forEach(k=>x[k]=r&&Object.prototype.hasOwnProperty.call(r,k)?r[k]:'');const nisn=normalizeNisn(x.NISN),nama=clean(x.Nama_Siswa);if(!/^\d{10}$/.test(nisn))throw new Error('Baris '+(i+2)+': NISN harus tepat 10 digit angka.');if(!nama)throw new Error('Baris '+(i+2)+': Nama_Siswa wajib diisi.');if(seen[nisn])throw new Error('Duplikat NISN dalam file pada baris '+(i+2)+': '+nisn);seen[nisn]=true;normalized.push({NISN:nisn,Nama_Siswa:nama,Kelas:clean(x.Kelas),Jurusan:clean(x.Jurusan),Tempat_Lahir:clean(x.Tempat_Lahir),Tanggal_Lahir:normalizeDate(x.Tanggal_Lahir),Nama_Orang_Tua:clean(x.Nama_Orang_Tua),Nomor_HP_Orang_Tua:clean(x.Nomor_HP_Orang_Tua),Alamat:clean(x.Alamat),Status:clean(x.Status)||'Aktif',Tahun_Pelajaran:clean(x.Tahun_Pelajaran)||getTahunPelajaran_()});});
-  const lock=LockService.getScriptLock();lock.waitLock(15000);
-  try{
-    const sh=getSheet_(APP.SHEETS.SISWA),lastCol=12;if(sh.getMaxColumns()<lastCol)sh.insertColumnsAfter(sh.getMaxColumns(),lastCol-sh.getMaxColumns());
-    const values=normalized.map(x=>[generateID_('SIS'),x.NISN,x.Nama_Siswa,x.Kelas,x.Jurusan,x.Tempat_Lahir,x.Tanggal_Lahir,x.Nama_Orang_Tua,x.Nomor_HP_Orang_Tua,x.Alamat,x.Status,x.Tahun_Pelajaran]),oldCount=Math.max(sh.getLastRow()-1,0);
-    if(sh.getLastColumn()<lastCol) sh.insertColumnsAfter(sh.getLastColumn(), lastCol-sh.getLastColumn());
-    sh.getRange(1,1,1,lastCol).setValues([DB_HEADERS]);if(oldCount)sh.getRange(2,1,oldCount,lastCol).clearContent();
-    sh.getRange(2,2,values.length,1).setNumberFormat('@');sh.getRange(2,9,values.length,1).setNumberFormat('@');sh.getRange(2,1,values.length,lastCol).setValues(values);SpreadsheetApp.flush();
-    if(sh.getRange(2,2).getDisplayValue().trim()!==normalized[0].NISN)throw new Error('Import gagal: DATA_SISWA tidak memuat NISN pertama setelah write.');
-    invalidateStudentCaches_();appendActivityFast_('IMPORT SISWA - REPLACE',normalized.length+' siswa pada DATA_SISWA.');
-    return{success:true,berhasil:normalized.length,dilewati:0,baru:normalized.length,diperbarui:0,diganti:oldCount,mode:'REPLACE_ALL',template:TEMPLATE,message:'Data siswa berhasil disimpan ke DATA_SISWA. Histori absensi/pelanggaran/penghargaan tidak dihapus.'};
-  }finally{lock.releaseLock();}
-}
+function importSiswaRows_(rows){ return importSiswaRowsCore_(rows,'admin',''); }

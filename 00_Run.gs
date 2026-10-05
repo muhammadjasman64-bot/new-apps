@@ -103,3 +103,11 @@ function systemHealthCheck() {
 
 function syncNisnDatabase(){return syncNisnDatabase_();}
 function validateNisnIntegrity(){return validateNisnIntegrity_();}
+
+function bindDatabaseToThisSpreadsheet(){
+  const ss=SpreadsheetApp.getActiveSpreadsheet();
+  if(!ss)throw new Error('Tidak ada Spreadsheet aktif. Buka project dari Spreadsheet database.');
+  PropertiesService.getScriptProperties().setProperty('SPREADSHEET_ID',ss.getId());
+  return {success:true,id:ss.getId(),name:ss.getName(),url:ss.getUrl(),message:'Database Web App sekarang terikat ke Spreadsheet ini.'};
+}
+function getDatabaseBindingInfo(){return getDatabaseBindingInfo_();}

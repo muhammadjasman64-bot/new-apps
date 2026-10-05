@@ -29,15 +29,64 @@ function getScopedStudentRows_(token, includeInactive){
   return rows.filter(function(x){return String(x.kelas||'').trim()===kelas;});
 }
 
-function importSiswaRowsScoped_(token, rows){
-  const s=requirePermission_(token,'write_students');if(s.role==='admin')return importSiswaRows_(rows);if(s.role!=='wali_kelas')throw new Error('Hanya Admin atau Wali Kelas yang dapat mengimpor data siswa.');
-  const kelas=String(s.kelas||'').trim();if(!kelas)throw new Error('Akun Wali Kelas belum memiliki Kelas.');if(!Array.isArray(rows)||!rows.length)throw new Error('Tidak ada data untuk diimpor.');
-  const TEMPLATE=['NISN','Nama_Siswa','Kelas','Jurusan','Tempat_Lahir','Tanggal_Lahir','Nama_Orang_Tua','Nomor_HP_Orang_Tua','Alamat','Status','Tahun_Pelajaran'],clean=v=>v==null?'':String(v).trim(),normalizeNisn=v=>clean(v).replace(/\.0$/,'').padStart(10,'0');
-  const imported=[],seen={};rows.forEach(function(r,i){if(String(r&&r.Kelas||'').trim()!==kelas)throw new Error('Baris '+(i+2)+': Kelas harus '+kelas+'.');const x={};TEMPLATE.forEach(k=>x[k]=r&&Object.prototype.hasOwnProperty.call(r,k)?r[k]:'');const nisn=normalizeNisn(x.NISN);if(!/^\d{10}$/.test(nisn))throw new Error('Baris '+(i+2)+': NISN harus tepat 10 digit.');if(!clean(x.Nama_Siswa))throw new Error('Baris '+(i+2)+': Nama_Siswa wajib diisi.');if(seen[nisn])throw new Error('Duplikat NISN dalam file: '+nisn);seen[nisn]=true;imported.push([generateID_('SIS'),nisn,clean(x.Nama_Siswa),kelas,clean(x.Jurusan),clean(x.Tempat_Lahir),clean(x.Tanggal_Lahir),clean(x.Nama_Orang_Tua),clean(x.Nomor_HP_Orang_Tua),clean(x.Alamat),clean(x.Status)||'Aktif',clean(x.Tahun_Pelajaran)||getTahunPelajaran_()]);});
-  const lock=LockService.getScriptLock();lock.waitLock(15000);try{
-    const sh=getSheet_(APP.SHEETS.SISWA),lastCol=12,lastRow=sh.getLastRow(),old=lastRow>=2?sh.getRange(2,1,lastRow-1,lastCol).getValues():[],keep=old.filter(r=>String(r[3]||'').trim()!==kelas),merged=keep.concat(imported);
-    if(old.length)sh.getRange(2,1,old.length,lastCol).clearContent();if(merged.length){sh.getRange(2,2,merged.length,1).setNumberFormat('@');sh.getRange(2,9,merged.length,1).setNumberFormat('@');sh.getRange(2,1,merged.length,lastCol).setValues(merged);}SpreadsheetApp.flush();
-    if(merged.length&&!sh.getRange(2,2).getDisplayValue().trim())throw new Error('Import kelas gagal diverifikasi di DATA_SISWA.');
-    invalidateStudentCaches_();appendActivityFast_('IMPORT SISWA WALI KELAS',kelas+'; '+imported.length+' siswa tersimpan.');return{success:true,berhasil:imported.length,diganti:imported.length,kelas,mode:'REPLACE_CLASS',message:'Data kelas '+kelas+' berhasil tersimpan. Kelas lain dan histori tetap dipertahankan.'};
+function importSiswaRowsCore_(rows, role, kelasWali){
+  role=String(role||'admin'); kelasWali=String(kelasWali||'').trim();
+  if(!Array.isArray(rows)||!rows.length)throw new Error('Tidak ada data untuk diimpor.');
+  if(role==='wali_kelas'&&!kelasWali)throw new Error('Akun Wali Kelas belum memiliki Kelas.');
+  const TEMPLATE=['NISN','Nama_Siswa','Kelas','Jurusan','Tempat_Lahir','Tanggal_Lahir','Nama_Orang_Tua','Nomor_HP_Orang_Tua','Alamat','Status','Tahun_Pelajaran'];
+  const clean=v=>v==null?'':String(v).trim();
+  const norm=v=>nisnText_(v);
+  const normalized=[],seen={};
+  rows.forEach((r,i)=>{
+    const x={}; TEMPLATE.forEach(k=>x[k]=r&&Object.prototype.hasOwnProperty.call(r,k)?r[k]:'');
+    const nisn=norm(x.NISN), kelas=clean(x.Kelas), nama=clean(x.Nama_Siswa);
+    if(!/^\d{10}$/.test(nisn))throw new Error('Baris '+(i+2)+': NISN harus tepat 10 digit.');
+    if(!nama)throw new Error('Baris '+(i+2)+': Nama_Siswa wajib diisi.');
+    if(role==='wali_kelas'&&kelas!==kelasWali)throw new Error('Baris '+(i+2)+': Kelas harus '+kelasWali+'.');
+    if(seen[nisn])throw new Error('Duplikat NISN dalam file: '+nisn); seen[nisn]=true;
+    normalized.push({NISN:nisn,Nama_Siswa:nama,Kelas:kelas,Jurusan:clean(x.Jurusan),Tempat_Lahir:clean(x.Tempat_Lahir),Tanggal_Lahir:clean(x.Tanggal_Lahir),Nama_Orang_Tua:clean(x.Nama_Orang_Tua),Nomor_HP_Orang_Tua:clean(x.Nomor_HP_Orang_Tua),Alamat:clean(x.Alamat),Status:clean(x.Status)||'Aktif',Tahun_Pelajaran:clean(x.Tahun_Pelajaran)||getTahunPelajaran_()});
+  });
+  const lock=LockService.getScriptLock(); lock.waitLock(15000);
+  try{
+    const sh=getSheet_(APP.SHEETS.SISWA), lc=Math.max(sh.getLastColumn(),12);
+    const h=sh.getRange(1,1,1,lc).getDisplayValues()[0].map(dbNormalizeHeader_);
+    const col=k=>h.indexOf(dbNormalizeHeader_(k));
+    const ni=col('nisn'); if(ni<0)throw new Error('Kolom NISN tidak ditemukan pada DATA_SISWA.');
+    const idc=col('id_siswa')>=0?col('id_siswa'):col('id');
+    const last=sh.getLastRow();
+    const nisnValues=last>=2?sh.getRange(2,ni+1,last-1,1).getDisplayValues():[];
+    const index={};
+    nisnValues.forEach((r,i)=>{const n=nisnText_(r[0]);if(/^\d{10}$/.test(n)&&index[n]===undefined)index[n]=i+2;});
+    const updates=[],appends=[];
+    normalized.forEach(x=>{
+      const rowNo=index[x.NISN];
+      const vals=rowNo?sh.getRange(rowNo,1,1,lc).getValues()[0]:Array(lc).fill('');
+      const set=(keys,v)=>{for(const k of (Array.isArray(keys)?keys:[keys])){const c=col(k);if(c>=0){vals[c]=v;return;}}};
+      if(!rowNo&&idc>=0)vals[idc]=generateID_('SIS');
+      set('nisn',x.NISN);set(['nama_siswa','nama'],x.Nama_Siswa);set('kelas',x.Kelas);set('jurusan',x.Jurusan);set('tempat_lahir',x.Tempat_Lahir);set('tanggal_lahir',x.Tanggal_Lahir);set('nama_orang_tua',x.Nama_Orang_Tua);set('nomor_hp_orang_tua',x.Nomor_HP_Orang_Tua);set('alamat',x.Alamat);set('status',x.Status);set('tahun_pelajaran',x.Tahun_Pelajaran);
+      if(rowNo)updates.push({row:rowNo,vals}); else appends.push(vals);
+    });
+    // Existing rows: one write per changed row (safe for mixed data), new rows: one batch append.
+    updates.forEach(u=>sh.getRange(u.row,1,1,lc).setValues([u.vals]));
+    if(appends.length){const start=sh.getLastRow()+1;sh.getRange(start,ni+1,appends.length,1).setNumberFormat('@');sh.getRange(start,1,appends.length,lc).setValues(appends);}
+    SpreadsheetApp.flush();
+    // Verify every imported NISN. Existing rows are checked individually; new rows are one batch read.
+    const verify={};
+    Object.keys(index).forEach(n=>{ if(normalized.some(x=>x.NISN===n)) verify[n]=sh.getRange(index[n],ni+1).getDisplayValue().trim(); });
+    if(appends.length){const start=sh.getLastRow()-appends.length+1;const nv=sh.getRange(start,ni+1,appends.length,1).getDisplayValues();appends.forEach((r,i)=>verify[nisnText_(r[ni])]=nv[i][0].trim());}
+    const bad=normalized.findIndex(x=>nisnText_(verify[x.NISN]||'')!==x.NISN);
+    if(bad>=0)throw new Error('Import gagal diverifikasi untuk NISN '+normalized[bad].NISN+'.');
+    invalidateStudentCaches_(); appendActivityFast_('IMPORT SISWA', (role==='wali_kelas'?kelasWali+'; ':'')+normalized.length+' siswa (upsert).');
+    return {success:true,berhasil:normalized.length,baru:appends.length,diperbarui:updates.length,dilewati:0,kelas:role==='wali_kelas'?kelasWali:'',mode:'UPSERT',message:'Data siswa berhasil disimpan ke DATA_SISWA tanpa menghapus data siswa lain.'};
   }finally{lock.releaseLock();}
 }
+
+function getDatabaseBindingInfo_(){
+  const props=PropertiesService.getScriptProperties();
+  const id=String(props.getProperty('SPREADSHEET_ID')||'').trim();
+  if(!id)return {ok:false,message:'SPREADSHEET_ID belum diset.'};
+  const ss=SpreadsheetApp.openById(id);
+  return {ok:true,id:ss.getId(),name:ss.getName(),url:ss.getUrl(),activeId:(SpreadsheetApp.getActiveSpreadsheet()||{}).getId?SpreadsheetApp.getActiveSpreadsheet().getId():'',sheets:ss.getSheets().map(x=>x.getName())};
+}
+
+function importSiswaRowsScoped_(token, rows){ const s=requirePermission_(token,'write_students'); return importSiswaRowsCore_(rows,s.role,s.kelas); }
