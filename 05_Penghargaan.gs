@@ -24,9 +24,28 @@ function seedMasterPenghargaanOfficial_(){
   sh.clearContents();sh.getRange(1,1,1,6).setValues([['Kode','Jenis','Prestasi','Tingkat','Poin','Aktif']]);sh.getRange(2,1,data.length,6).setValues(data);sh.setFrozenRows(1);sh.autoResizeColumns(1,6);return data.length;
 }
 
+// Performance: master pembinaan dibaca sekali per eksekusi dan dicache singkat.
+// Ini mencegah pembacaan Spreadsheet berulang ketika dashboard menghitung banyak siswa.
+let MASTER_PEMBINAAN_MEM_ = null;
 function getMasterPembinaan_(){
+  if(Array.isArray(MASTER_PEMBINAAN_MEM_)) return MASTER_PEMBINAAN_MEM_;
+  const cached=cacheGetJson_('MASTER_PEMBINAAN_CACHE');
+  if(Array.isArray(cached)){
+    MASTER_PEMBINAAN_MEM_=cached;
+    return MASTER_PEMBINAAN_MEM_;
+  }
   const d=dbRead_(APP.SHEETS.MASTER_PEMBINAAN);
-  return d.rows.map(r=>({kode:String(r.Kode||''),min:Number(r.Min_Poin)||0,max:Number(r.Max_Poin)||0,status:String(r.Status||''),pemanggilan:Number(r.Pemanggilan_Ke)||0,pihak:String(r.Pihak||''),tindakan:String(r.Tindakan||''),dokumen:String(r.Dokumen||'')})).filter(x=>x.kode);
+  MASTER_PEMBINAAN_MEM_=d.rows.map(r=>({
+    kode:String(r.Kode||''),
+    min:Number(r.Min_Poin)||0,
+    max:Number(r.Max_Poin)||0,
+    status:String(r.Status||''),
+    pemanggilan:Number(r.Pemanggilan_Ke)||0,
+    pihak:String(r.Pihak||''),
+    tindakan:String(r.Tindakan||''),
+    dokumen:String(r.Dokumen||'')
+  })).filter(x=>x.kode);
+  return cachePutJson_('MASTER_PEMBINAAN_CACHE',MASTER_PEMBINAAN_MEM_,CACHE_TTL.MASTER);
 }
 
 function resetMasterPenghargaan_(){ return seedMasterPenghargaanOfficial_(); }

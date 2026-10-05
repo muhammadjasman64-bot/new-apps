@@ -107,23 +107,31 @@ function getRekapAbsensi_(period,year,month,semester,kelas,weekStart){
 }
 
 function getAbsensiTable_(dateStr,kelas){
-  const key=formatDateKey_(parseDateInput_(dateStr)||new Date()), sh=getSheet_(APP.SHEETS.ABSENSI), lastRow=sh.getLastRow(), lastCol=sh.getLastColumn();
+  const key=formatDateKey_(parseDateInput_(dateStr)||new Date());
+  const cacheKey=cacheKey_('ABS_TABLE',[key,kelas||'']);
+  const cached=cacheGetJson_(cacheKey); if(cached) return cached;
+  const sh=getSheet_(APP.SHEETS.ABSENSI), lastRow=sh.getLastRow(), lastCol=sh.getLastColumn();
   if(lastRow<2||!lastCol)return [];
   const all=sh.getRange(1,1,lastRow,lastCol).getValues(), headers=all[0].map(dbNormalizeHeader_), map=Object.fromEntries(headers.map((x,i)=>[x,i]));
   const cId=dbFindColumn_(map,['ID','ID_Absensi']),cT=dbFindColumn_(map,['Tanggal','Tanggal_Absensi','Tanggal Absensi','Tgl']),cN=dbFindColumn_(map,['NISN','NIS','Nomor Induk Siswa Nasional']),cNm=dbFindColumn_(map,['Nama_Siswa','Nama Siswa','Nama']),cK=dbFindColumn_(map,['Kelas','Rombel','Kelas/Rombel']),cS=dbFindColumn_(map,['Status','Status Kehadiran','Kehadiran']),cKet=dbFindColumn_(map,['Keterangan','Catatan']),cU=dbFindColumn_(map,['User','Penginput','Dibuat_Oleh']),cY=dbFindColumn_(map,['Tahun_Pelajaran','Tahun Pelajaran']),cSem=dbFindColumn_(map,['Semester']);
   if(cT<0||cN<0||cS<0)return [];
-  return all.slice(1).filter(r=>formatDateKey_(r[cT])===key&&(!kelas||cK<0||String(r[cK]).trim()===String(kelas).trim())).map(r=>({id:cId>=0?r[cId]:'',tanggal:formatTanggal_(r[cT]),nisn:cN>=0?absensiCanonicalNisn_(r[cN]):'',nama:cNm>=0?r[cNm]:'',kelas:cK>=0?r[cK]:'',status:cS>=0?r[cS]:'',keterangan:cKet>=0?r[cKet]:'',user:cU>=0?r[cU]:'',tahunPelajaran:cY>=0?r[cY]:'',semester:cSem>=0?r[cSem]:''}));
+  const result=all.slice(1).filter(r=>formatDateKey_(r[cT])===key&&(!kelas||cK<0||String(r[cK]).trim()===String(kelas).trim())).map(r=>({id:cId>=0?r[cId]:'',tanggal:formatTanggal_(r[cT]),nisn:cN>=0?absensiCanonicalNisn_(r[cN]):'',nama:cNm>=0?r[cNm]:'',kelas:cK>=0?r[cK]:'',status:cS>=0?r[cS]:'',keterangan:cKet>=0?r[cKet]:'',user:cU>=0?r[cU]:'',tahunPelajaran:cY>=0?r[cY]:'',semester:cSem>=0?r[cSem]:''}));
+  return cachePutJson_(cacheKey,result,CACHE_TTL.DERIVED);
 }
 
 
 function getAbsensiHistory_(filters){
-  filters=filters||{}; const sh=getSheet_(APP.SHEETS.ABSENSI),lr=sh.getLastRow(),lc=sh.getLastColumn();
+  filters=filters||{};
+  const cacheKey=cacheKey_('ABS_HISTORY',[filters.from||'',filters.to||'',filters.kelas||'',filters.nisn||'']);
+  const cached=cacheGetJson_(cacheKey); if(cached) return cached;
+  const sh=getSheet_(APP.SHEETS.ABSENSI),lr=sh.getLastRow(),lc=sh.getLastColumn();
   if(lr<2||!lc)return [];
   const all=sh.getRange(1,1,lr,lc).getValues(),h=all[0].map(dbNormalizeHeader_),map=Object.fromEntries(h.map((x,i)=>[x,i]));
   const ct=dbFindColumn_(map,['Tanggal','Tanggal_Absensi','Tanggal Absensi','Tgl']),cn=dbFindColumn_(map,['NISN','NIS']),cnm=dbFindColumn_(map,['Nama_Siswa','Nama Siswa','Nama']),ck=dbFindColumn_(map,['Kelas','Rombel','Kelas/Rombel']),cs=dbFindColumn_(map,['Status','Status Kehadiran','Kehadiran']),cket=dbFindColumn_(map,['Keterangan','Catatan']);
   if(ct<0||cn<0||cs<0)return [];
   const from=filters.from?formatDateKey_(parseDateInput_(filters.from)):''; const to=filters.to?formatDateKey_(parseDateInput_(filters.to)):''; const kelas=String(filters.kelas||'').trim(); const nisn=absensiCanonicalNisn_(filters.nisn||'');
-  return all.slice(1).map(r=>{const d=parseDateInput_(r[ct]);return {tanggal:d?formatTanggal_(d):'',tanggalKey:d?formatDateKey_(d):'',nisn:canonicalNisn_(r[cn]),nama:cnm>=0?String(r[cnm]||''):'',kelas:ck>=0?String(r[ck]||''):'',status:String(r[cs]||''),keterangan:cket>=0?String(r[cket]||''):''};}).filter(x=>(!from||x.tanggalKey>=from)&&(!to||x.tanggalKey<=to)&&(!kelas||x.kelas===kelas)&&(!nisn||x.nisn===nisn)).sort((a,b)=>b.tanggalKey.localeCompare(a.tanggalKey)||a.nama.localeCompare(b.nama));
+  const result=all.slice(1).map(r=>{const d=parseDateInput_(r[ct]);return {tanggal:d?formatTanggal_(d):'',tanggalKey:d?formatDateKey_(d):'',nisn:canonicalNisn_(r[cn]),nama:cnm>=0?String(r[cnm]||''):'',kelas:ck>=0?String(r[ck]||''):'',status:String(r[cs]||''),keterangan:cket>=0?String(r[cket]||''):''};}).filter(x=>(!from||x.tanggalKey>=from)&&(!to||x.tanggalKey<=to)&&(!kelas||x.kelas===kelas)&&(!nisn||x.nisn===nisn)).sort((a,b)=>b.tanggalKey.localeCompare(a.tanggalKey)||a.nama.localeCompare(b.nama));
+  return cachePutJson_(cacheKey,result,CACHE_TTL.DERIVED);
 }
 function getAbsensiSummary_(filters){
   filters=filters||{}; const rows=getAbsensiHistory_(filters), m={}; rows.forEach(x=>{if(!m[x.nisn])m[x.nisn]={nisn:x.nisn,nama:x.nama,kelas:x.kelas,H:0,S:0,I:0,A:0,T:0,D:0,total:0}; const st=x.status.toUpperCase();if(Object.prototype.hasOwnProperty.call(m[x.nisn],st))m[x.nisn][st]++;m[x.nisn].total++;});

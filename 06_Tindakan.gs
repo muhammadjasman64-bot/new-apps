@@ -1,9 +1,10 @@
 /** 06_Tindakan.gs - mesin pembinaan sesuai dokumen sekolah */
+let DECISION_RULES_MEM_ = null;
 function getKeputusanPoin_(totalPoin) {
   const p=Number(totalPoin)||0;
   if(p<5) return {status:'NORMAL',pemanggilan:0,surat:'',tindakan:'Belum masuk tahapan pembinaan berdasarkan sistem poin.'};
-  const rules=getMasterPembinaan_();
-  const r=rules.find(x=>p>=x.min&&p<=x.max);
+  if(!Array.isArray(DECISION_RULES_MEM_)) DECISION_RULES_MEM_=getMasterPembinaan_();
+  const r=DECISION_RULES_MEM_.find(x=>p>=x.min&&p<=x.max);
   if(r) return {status:r.status,pemanggilan:r.pemanggilan,surat:r.dokumen,tindakan:r.tindakan,pihak:r.pihak,min:r.min,max:r.max};
   return {status:'MELEBIHI 100',pemanggilan:6,surat:'',tindakan:'Poin melebihi batas 100 pada tabel prosedur. Wajib diverifikasi oleh pihak sekolah.',pihak:'Kepala Sekolah'};
 }

@@ -5,8 +5,9 @@ function cacheKey_(prefix,parts){const v=PropertiesService.getScriptProperties()
 function cacheGetJson_(key){try{const v=CacheService.getScriptCache().get(key);return v?JSON.parse(v):null;}catch(e){return null;}}
 function cachePutJson_(key,value,ttl){try{CacheService.getScriptCache().put(key,JSON.stringify(value),ttl||300);}catch(e){}return value;}
 function clearAppCache_(){
+  try{if(typeof MASTER_PEMBINAAN_MEM_!=='undefined') MASTER_PEMBINAAN_MEM_=null;if(typeof DECISION_RULES_MEM_!=='undefined') DECISION_RULES_MEM_=null;}catch(e){}
   CacheService.getScriptCache().removeAll([
-    'DB_LAST_SYNC','APP_CONFIG_CACHE','MASTER_PEL_CACHE','MASTER_REWARD_CACHE','STUDENTS_CACHE','DASHBOARD_CACHE','DASHBOARD_DETAIL_CACHE','STATUS_ALERT_SUMMARY_CACHE','ATTENDANCE_RISK_SUMMARY_CACHE','UNIFIED_RISK_SUMMARY_CACHE','EARLY_WARNING_SUMMARY_CACHE'
+    'DB_LAST_SYNC','APP_CONFIG_CACHE','MASTER_PEL_CACHE','MASTER_REWARD_CACHE','MASTER_PEMBINAAN_CACHE','STUDENTS_CACHE','DASHBOARD_CACHE','DASHBOARD_DETAIL_CACHE','STATUS_ALERT_SUMMARY_CACHE','ATTENDANCE_RISK_SUMMARY_CACHE','UNIFIED_RISK_SUMMARY_CACHE','EARLY_WARNING_SUMMARY_CACHE'
   ]);
   PropertiesService.getScriptProperties().setProperty('DB_VERSION',String(Date.now()));
   return {ok:true,message:'Cache aplikasi berhasil dibersihkan.'};
